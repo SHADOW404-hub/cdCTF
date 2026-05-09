@@ -1,0 +1,250 @@
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useRoute, useLocation } from "wouter";
+import { AlertTriangle, Timer, CheckCircle2, XCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { useLang } from "@/lib/LanguageContext";
+import { useStartLessonTest, useSubmitLessonTest, useReportTestEscape } from "@workspace/api-client-react";
+import { useToast } from "@/hooks/use-toast";
+
+export default function LessonTestPage() {
+  const [, params] = useRoute("/learn/:id/test");
+  const id = Number(params?.id);
+  const { t } = useLang();
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [questions, setQuestions] = useState<Array<{ id: number; question: string; options: string[] }>>([]);
+  const [answers, setAnswers] = useState<Record<number, number>>({});
+  const [attemptsLeft, setAttemptsLeft] = useState(3);
+  const [result, setResult] = useState<{ passed: boolean; score: number; correctCount: number; totalCount: number; pointsEarned: number } | null>(null);
+  const [escapeWarning, setEscapeWarning] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+  const [blocked, setBlocked] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const startTest = useStartLessonTest();
+  const submitTest = useSubmitLessonTest();
+  const reportEscape = useReportTestEscape();
+
+  // Enter fullscreen on mount
+  useEffect(() => {
+    document.documentElement.requestFullscreen?.().catch(() => {});
+
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement && sessionId && !result) {
+        handleEscape();
+      }
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      if (document.fullscreenElement) document.exitFullscreen?.();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, result]);
+
+  const handleEscape = useCallback(() => {
+    if (!sessionId) return;
+    reportEscape.mutate(
+      { id },
+      {
+        onSuccess: (res) => {
+          if (res.blocked) {
+            setBlocked(true);
+            setEscapeWarning(false);
+          } else {
+            setEscapeWarning(true);
+            const secs = res.timeoutSeconds ?? 60;
+            setCountdown(secs);
+            countdownRef.current = setInterval(() => {
+              setCountdown(c => {
+                if (c <= 1) {
+                  clearInterval(countdownRef.current!);
+                  setEscapeWarning(false);
+                  return 0;
+                }
+                return c - 1;
+              });
+            }, 1000);
+          }
+        },
+      }
+    );
+  }, [sessionId, id, reportEscape]);
+
+  // Start test on mount
+  useEffect(() => {
+    setLoading(true);
+    startTest.mutate(
+      { id },
+      {
+        onSuccess: (res) => {
+          setSessionId(res.sessionId);
+          setQuestions(res.questions as typeof questions);
+          setAttemptsLeft(res.attemptsLeft);
+          setLoading(false);
+        },
+        onError: (err: unknown) => {
+          const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error ?? "Error";
+          toast({ title: msg, variant: "destructive" });
+          setLocation(`/learn/${id}`);
+        },
+      }
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+
+  const handleSubmit = () => {
+    if (!sessionId) return;
+    const answersList = Object.entries(answers).map(([qId, opt]) => ({
+      questionId: Number(qId),
+      selectedOption: opt,
+    }));
+
+    submitTest.mutate(
+      { id, data: { sessionId, answers: answersList } },
+      {
+        onSuccess: (res) => {
+          setResult(res);
+          if (document.fullscreenElement) document.exitFullscreen?.();
+        },
+        onError: () => toast({ title: "Error submitting test", variant: "destructive" }),
+      }
+    );
+  };
+
+  if (blocked) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="text-center max-w-sm">
+          <AlertTriangle className="w-12 h-12 text-destructive mx-auto mb-4" />
+          <h2 className="text-xl font-bold mb-2">{t("Lesson Blocked", "Dars Bloklangan", "Урок заблокирован")}</h2>
+          <p className="text-sm text-muted-foreground mb-6">{t("You exited fullscreen 3 times. Contact admin to unblock.", "3 marta to'liq ekrandan chiqdingiz. Blokni ochish uchun adminga murojaat qiling.", "Вы вышли из полноэкранного режима 3 раза.")}</p>
+          <Button onClick={() => setLocation(`/learn/${id}`)}>
+            {t("Back to Lesson", "Darsga Qaytish", "Вернуться к уроку")}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (result) {
+    const percentage = Math.round(result.score * 100);
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="text-center max-w-sm">
+          {result.passed ? (
+            <CheckCircle2 className="w-14 h-14 text-primary mx-auto mb-4" />
+          ) : (
+            <XCircle className="w-14 h-14 text-destructive mx-auto mb-4" />
+          )}
+          <h2 className="text-2xl font-bold mb-1">
+            {result.passed ? t("Passed!", "O'tdingiz!", "Сдано!") : t("Failed", "Muvaffaqiyatsiz", "Провалено")}
+          </h2>
+          <p className="text-4xl font-mono font-bold text-primary mb-2">{percentage}%</p>
+          <p className="text-sm text-muted-foreground mb-2">
+            {result.correctCount}/{result.totalCount} {t("correct", "to'g'ri", "правильно")}
+          </p>
+          {result.passed && result.pointsEarned > 0 && (
+            <p className="text-sm font-medium text-primary mb-4">+{result.pointsEarned} pts</p>
+          )}
+          {!result.passed && attemptsLeft > 0 && (
+            <p className="text-xs text-muted-foreground mb-4">{attemptsLeft} {t("attempts remaining", "urinish qoldi", "попыток осталось")}</p>
+          )}
+          <div className="flex gap-2 justify-center">
+            <Button variant="outline" onClick={() => setLocation(`/learn/${id}`)}>
+              {t("Back to Lesson", "Darsga Qaytish", "К уроку")}
+            </Button>
+            {!result.passed && attemptsLeft > 0 && (
+              <Button onClick={() => { setResult(null); setAnswers({}); setLoading(true); startTest.mutate({ id }, { onSuccess: (res) => { setSessionId(res.sessionId); setQuestions(res.questions as typeof questions); setAttemptsLeft(res.attemptsLeft); setLoading(false); } }); }}>
+                {t("Try Again", "Qayta Urinish", "Попробовать снова")}
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">{t("Loading test...", "Test yuklanmoqda...", "Загрузка теста...")}</p>
+      </div>
+    );
+  }
+
+  const answered = Object.keys(answers).length;
+  const progress = (answered / questions.length) * 100;
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Escape Warning */}
+      {escapeWarning && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-destructive text-destructive-foreground px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4" />
+            <span className="text-sm font-medium">{t("You exited fullscreen!", "To'liq ekrandan chiqdingiz!", "Вы вышли из полноэкранного режима!")}</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-sm flex items-center gap-1"><Timer className="w-3.5 h-3.5" /> {countdown}s</span>
+            <Button size="sm" variant="secondary" onClick={() => { document.documentElement.requestFullscreen?.(); setEscapeWarning(false); clearInterval(countdownRef.current!); }}>
+              {t("Return to Fullscreen", "Qaytish", "Вернуться")}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div className="max-w-2xl mx-auto px-4 py-10 pt-16">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-xl font-bold">{t("Lesson Test", "Dars Testi", "Тест урока")}</h1>
+          <span className="text-sm text-muted-foreground">{answered}/{questions.length} {t("answered", "javob berildi", "отвечено")}</span>
+        </div>
+        <Progress value={progress} className="mb-8 h-1.5" />
+
+        {/* Questions */}
+        <div className="space-y-6">
+          {questions.map((q, qi) => (
+            <div key={q.id} className="p-5 rounded-xl border border-border bg-card" data-testid={`card-question-${qi}`}>
+              <p className="font-medium mb-4 text-sm">{qi + 1}. {q.question}</p>
+              <div className="space-y-2">
+                {q.options.map((opt, oi) => (
+                  <button
+                    key={oi}
+                    onClick={() => setAnswers(prev => ({ ...prev, [q.id]: oi }))}
+                    className={`w-full text-left p-3 rounded-lg border text-sm transition-colors ${
+                      answers[q.id] === oi
+                        ? "border-primary bg-primary/10 text-primary font-medium"
+                        : "border-border hover:border-primary/40 hover:bg-muted/50"
+                    }`}
+                    data-testid={`button-option-${qi}-${oi}`}
+                  >
+                    <span className="font-mono text-xs mr-2 text-muted-foreground">{String.fromCharCode(65 + oi)}.</span>
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-8 flex items-center justify-between">
+          <p className="text-xs text-muted-foreground">{t("Pass threshold: 80%", "O'tish chegarasi: 80%", "Порог прохождения: 80%")}</p>
+          <Button
+            onClick={handleSubmit}
+            disabled={answered < questions.length || submitTest.isPending}
+            className="gap-2"
+            data-testid="button-submit-test"
+          >
+            {submitTest.isPending ? t("Submitting...", "Yuborilmoqda...", "Отправка...") : t("Submit Test", "Testni Yuborish", "Отправить тест")}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}

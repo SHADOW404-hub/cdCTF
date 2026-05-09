@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "rPugVnSv18j25ZL7fa_vC"
+uri = "file://cyberplace.tar.gz"
+type = "unspecified"
+title = "CyberPlace — loyiha arxivi"

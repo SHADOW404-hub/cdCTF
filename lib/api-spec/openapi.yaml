@@ -1,0 +1,1762 @@
+openapi: 3.1.0
+info:
+  title: cdCTF API
+  version: 0.1.0
+  description: cdCTF API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+  - name: auth
+  - name: ctf
+  - name: learn
+  - name: scoreboard
+  - name: competitions
+  - name: profile
+  - name: admin
+  - name: titles
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  # AUTH
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterBody"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login with nickname and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Login success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout current user
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/verify-email:
+    get:
+      operationId: verifyEmail
+      tags: [auth]
+      summary: Verify email with token
+      parameters:
+        - in: query
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Email verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Invalid token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # CTF
+  /ctf:
+    get:
+      operationId: listCtfChallenges
+      tags: [ctf]
+      summary: List CTF challenges
+      parameters:
+        - in: query
+          name: category
+          schema:
+            type: string
+        - in: query
+          name: difficulty
+          schema:
+            type: string
+            enum: [easy, medium, hard, insane]
+        - in: query
+          name: solved
+          schema:
+            type: boolean
+        - in: query
+          name: search
+          schema:
+            type: string
+        - in: query
+          name: minPoints
+          schema:
+            type: integer
+        - in: query
+          name: maxPoints
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of CTF challenges
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CtfChallenge"
+
+  /ctf/stats:
+    get:
+      operationId: getCtfStats
+      tags: [ctf]
+      summary: Get CTF stats (most solved, categories breakdown)
+      responses:
+        "200":
+          description: CTF statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CtfStats"
+
+  /ctf/{id}:
+    get:
+      operationId: getCtfChallenge
+      tags: [ctf]
+      summary: Get a CTF challenge by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: CTF challenge
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CtfChallengeDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /ctf/{id}/submit:
+    post:
+      operationId: submitCtfFlag
+      tags: [ctf]
+      summary: Submit a flag for a CTF challenge
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitFlagBody"
+      responses:
+        "200":
+          description: Flag submission result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FlagSubmitResponse"
+        "403":
+          description: Blocked or already solved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /ctf/{id}/hint:
+    post:
+      operationId: useCtfHint
+      tags: [ctf]
+      summary: Use a hint for a CTF challenge (costs points)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Hint content
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HintResponse"
+        "403":
+          description: Cannot use hint
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # LEARN
+  /learn/categories:
+    get:
+      operationId: listLearnCategories
+      tags: [learn]
+      summary: List learning categories
+      responses:
+        "200":
+          description: Categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LearnCategory"
+
+  /learn/lessons:
+    get:
+      operationId: listLessons
+      tags: [learn]
+      summary: List lessons
+      parameters:
+        - in: query
+          name: category
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Lessons
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Lesson"
+
+  /learn/lessons/{id}:
+    get:
+      operationId: getLesson
+      tags: [learn]
+      summary: Get lesson detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Lesson detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LessonDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /learn/lessons/{id}/test/start:
+    post:
+      operationId: startLessonTest
+      tags: [learn]
+      summary: Start a lesson test (activates anti-cheat)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Test started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestStartResponse"
+        "403":
+          description: Blocked or max attempts reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /learn/lessons/{id}/test/submit:
+    post:
+      operationId: submitLessonTest
+      tags: [learn]
+      summary: Submit lesson test answers
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitTestBody"
+      responses:
+        "200":
+          description: Test result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestResult"
+        "403":
+          description: Blocked or not started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /learn/lessons/{id}/test/escape:
+    post:
+      operationId: reportTestEscape
+      tags: [learn]
+      summary: Report ESC key press during test (anti-cheat)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Escape handled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EscapeResponse"
+
+  # SCOREBOARD
+  /scoreboard:
+    get:
+      operationId: getScoreboard
+      tags: [scoreboard]
+      summary: Get global scoreboard
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Scoreboard entries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScoreboardResponse"
+
+  # COMPETITIONS
+  /competitions:
+    get:
+      operationId: listCompetitions
+      tags: [competitions]
+      summary: List competitions
+      responses:
+        "200":
+          description: Competitions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Competition"
+
+  /competitions/{id}:
+    get:
+      operationId: getCompetition
+      tags: [competitions]
+      summary: Get competition detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Competition detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompetitionDetail"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /competitions/{id}/join:
+    post:
+      operationId: joinCompetition
+      tags: [competitions]
+      summary: Join a competition
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Joined
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "403":
+          description: Cannot join
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /competitions/{id}/scoreboard:
+    get:
+      operationId: getCompetitionScoreboard
+      tags: [competitions]
+      summary: Get competition scoreboard
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Competition scoreboard
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ScoreboardEntry"
+
+  # PROFILE
+  /users/{id}:
+    get:
+      operationId: getUserProfile
+      tags: [profile]
+      summary: Get user profile
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+    patch:
+      operationId: updateUserProfile
+      tags: [profile]
+      summary: Update user profile
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileBody"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+
+  /titles:
+    get:
+      operationId: listTitles
+      tags: [titles]
+      summary: List all available titles
+      responses:
+        "200":
+          description: Titles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Title"
+
+  # ADMIN
+  /admin/dashboard:
+    get:
+      operationId: getAdminDashboard
+      tags: [admin]
+      summary: Get admin dashboard stats
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminDashboard"
+
+  /admin/users:
+    get:
+      operationId: adminListUsers
+      tags: [admin]
+      summary: List all users
+      parameters:
+        - in: query
+          name: search
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 50
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Users list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUsersResponse"
+
+  /admin/users/{id}/block:
+    post:
+      operationId: adminBlockUser
+      tags: [admin]
+      summary: Block a user
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User blocked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /admin/users/{id}/unblock:
+    post:
+      operationId: adminUnblockUser
+      tags: [admin]
+      summary: Unblock a user
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User unblocked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /admin/ctf:
+    post:
+      operationId: adminCreateCtf
+      tags: [admin]
+      summary: Create a CTF challenge
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCtfBody"
+      responses:
+        "201":
+          description: CTF created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CtfChallengeDetail"
+
+  /admin/ctf/{id}:
+    put:
+      operationId: adminUpdateCtf
+      tags: [admin]
+      summary: Update a CTF challenge
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCtfBody"
+      responses:
+        "200":
+          description: CTF updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CtfChallengeDetail"
+
+    delete:
+      operationId: adminDeleteCtf
+      tags: [admin]
+      summary: Delete a CTF challenge
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: CTF deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /admin/ctf/{id}/unblock-user/{userId}:
+    post:
+      operationId: adminUnblockCtfUser
+      tags: [admin]
+      summary: Unblock a user from a specific CTF
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User unblocked for CTF
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /admin/blocked-tasks:
+    get:
+      operationId: adminGetBlockedTasks
+      tags: [admin]
+      summary: Get all blocked CTFs and lessons
+      responses:
+        "200":
+          description: Blocked tasks
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BlockedTasksResponse"
+
+  /admin/blocked-tasks/{type}/{taskId}/unblock/{userId}:
+    post:
+      operationId: adminUnblockTask
+      tags: [admin]
+      summary: Unblock a task for a user
+      parameters:
+        - in: path
+          name: type
+          required: true
+          schema:
+            type: string
+            enum: [ctf, lesson]
+        - in: path
+          name: taskId
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Task unblocked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /admin/competitions:
+    post:
+      operationId: adminCreateCompetition
+      tags: [admin]
+      summary: Create a competition
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCompetitionBody"
+      responses:
+        "201":
+          description: Competition created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Competition"
+
+  /admin/competitions/{id}:
+    put:
+      operationId: adminUpdateCompetition
+      tags: [admin]
+      summary: Update a competition
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCompetitionBody"
+      responses:
+        "200":
+          description: Competition updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Competition"
+
+  /admin/competitions/{id}/users/{userId}:
+    post:
+      operationId: adminAddCompetitionUser
+      tags: [admin]
+      summary: Add user to private competition
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: User added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+  /admin/lessons:
+    post:
+      operationId: adminCreateLesson
+      tags: [admin]
+      summary: Create a lesson
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLessonBody"
+      responses:
+        "201":
+          description: Lesson created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LessonDetail"
+
+  /admin/lessons/{id}:
+    put:
+      operationId: adminUpdateLesson
+      tags: [admin]
+      summary: Update a lesson
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLessonBody"
+      responses:
+        "200":
+          description: Lesson updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LessonDetail"
+
+    delete:
+      operationId: adminDeleteLesson
+      tags: [admin]
+      summary: Delete a lesson
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Lesson deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required: [status]
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required: [error]
+
+    MessageResponse:
+      type: object
+      properties:
+        message:
+          type: string
+      required: [message]
+
+    # Auth
+    RegisterBody:
+      type: object
+      properties:
+        nickname:
+          type: string
+          minLength: 3
+          maxLength: 32
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+      required: [nickname, email, password]
+
+    LoginBody:
+      type: object
+      properties:
+        nickname:
+          type: string
+        password:
+          type: string
+      required: [nickname, password]
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+      required: [token, user]
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        nickname:
+          type: string
+        email:
+          type: string
+        avatarUrl:
+          type: string
+          nullable: true
+        points:
+          type: integer
+        role:
+          type: string
+          enum: [user, admin]
+        emailVerified:
+          type: boolean
+        isBlocked:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, nickname, email, points, role, emailVerified, isBlocked, createdAt]
+
+    # CTF
+    CtfChallenge:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        category:
+          type: string
+        difficulty:
+          type: string
+          enum: [easy, medium, hard, insane]
+        points:
+          type: integer
+        solvedCount:
+          type: integer
+        isSolved:
+          type: boolean
+        isBlocked:
+          type: boolean
+      required: [id, name, category, difficulty, points, solvedCount, isSolved, isBlocked]
+
+    CtfChallengeDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        nameUz:
+          type: string
+          nullable: true
+        nameRu:
+          type: string
+          nullable: true
+        description:
+          type: string
+        descriptionUz:
+          type: string
+          nullable: true
+        descriptionRu:
+          type: string
+          nullable: true
+        category:
+          type: string
+        difficulty:
+          type: string
+          enum: [easy, medium, hard, insane]
+        points:
+          type: integer
+        hintCost:
+          type: integer
+        fileUrl:
+          type: string
+          nullable: true
+        solvedCount:
+          type: integer
+        isSolved:
+          type: boolean
+        isBlocked:
+          type: boolean
+        hintUsed:
+          type: boolean
+        wrongAttempts:
+          type: integer
+      required: [id, name, description, category, difficulty, points, hintCost, solvedCount, isSolved, isBlocked, hintUsed, wrongAttempts]
+
+    CtfStats:
+      type: object
+      properties:
+        totalChallenges:
+          type: integer
+        categoryCounts:
+          type: array
+          items:
+            type: object
+            properties:
+              category:
+                type: string
+              count:
+                type: integer
+              solved:
+                type: integer
+            required: [category, count, solved]
+        mostSolved:
+          type: array
+          items:
+            $ref: "#/components/schemas/CtfChallenge"
+        recentlySolved:
+          type: array
+          items:
+            type: object
+            properties:
+              userId:
+                type: integer
+              nickname:
+                type: string
+              ctfName:
+                type: string
+              solvedAt:
+                type: string
+                format: date-time
+            required: [userId, nickname, ctfName, solvedAt]
+      required: [totalChallenges, categoryCounts, mostSolved, recentlySolved]
+
+    SubmitFlagBody:
+      type: object
+      properties:
+        flag:
+          type: string
+      required: [flag]
+
+    FlagSubmitResponse:
+      type: object
+      properties:
+        correct:
+          type: boolean
+        message:
+          type: string
+        pointsEarned:
+          type: integer
+          nullable: true
+        wrongAttempts:
+          type: integer
+        blocked:
+          type: boolean
+      required: [correct, message, wrongAttempts, blocked]
+
+    HintResponse:
+      type: object
+      properties:
+        hint:
+          type: string
+        pointsDeducted:
+          type: integer
+        remainingPoints:
+          type: integer
+      required: [hint, pointsDeducted, remainingPoints]
+
+    # Learn
+    LearnCategory:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        nameUz:
+          type: string
+          nullable: true
+        nameRu:
+          type: string
+          nullable: true
+        lessonCount:
+          type: integer
+        completedCount:
+          type: integer
+      required: [id, name, lessonCount, completedCount]
+
+    Lesson:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        titleUz:
+          type: string
+          nullable: true
+        titleRu:
+          type: string
+          nullable: true
+        categoryId:
+          type: integer
+        categoryName:
+          type: string
+        points:
+          type: integer
+        isCompleted:
+          type: boolean
+        isBlocked:
+          type: boolean
+        attemptCount:
+          type: integer
+      required: [id, title, categoryId, categoryName, points, isCompleted, isBlocked, attemptCount]
+
+    LessonDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        titleUz:
+          type: string
+          nullable: true
+        titleRu:
+          type: string
+          nullable: true
+        content:
+          type: string
+        contentUz:
+          type: string
+          nullable: true
+        contentRu:
+          type: string
+          nullable: true
+        categoryId:
+          type: integer
+        categoryName:
+          type: string
+        points:
+          type: integer
+        isCompleted:
+          type: boolean
+        isBlocked:
+          type: boolean
+        attemptCount:
+          type: integer
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/LessonQuestion"
+      required: [id, title, content, categoryId, categoryName, points, isCompleted, isBlocked, attemptCount, questions]
+
+    LessonQuestion:
+      type: object
+      properties:
+        id:
+          type: integer
+        question:
+          type: string
+        questionUz:
+          type: string
+          nullable: true
+        questionRu:
+          type: string
+          nullable: true
+        options:
+          type: array
+          items:
+            type: string
+        optionsUz:
+          type: array
+          items:
+            type: string
+          nullable: true
+        optionsRu:
+          type: array
+          items:
+            type: string
+          nullable: true
+      required: [id, question, options]
+
+    TestStartResponse:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        attemptsLeft:
+          type: integer
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/LessonQuestion"
+      required: [sessionId, attemptsLeft, questions]
+
+    SubmitTestBody:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        answers:
+          type: array
+          items:
+            type: object
+            properties:
+              questionId:
+                type: integer
+              selectedOption:
+                type: integer
+            required: [questionId, selectedOption]
+      required: [sessionId, answers]
+
+    TestResult:
+      type: object
+      properties:
+        passed:
+          type: boolean
+        score:
+          type: number
+        correctCount:
+          type: integer
+        totalCount:
+          type: integer
+        attemptsLeft:
+          type: integer
+        pointsEarned:
+          type: integer
+      required: [passed, score, correctCount, totalCount, attemptsLeft, pointsEarned]
+
+    EscapeResponse:
+      type: object
+      properties:
+        escapeCount:
+          type: integer
+        blocked:
+          type: boolean
+        timeoutSeconds:
+          type: integer
+          nullable: true
+        message:
+          type: string
+      required: [escapeCount, blocked, message]
+
+    # Scoreboard
+    ScoreboardEntry:
+      type: object
+      properties:
+        rank:
+          type: integer
+        userId:
+          type: integer
+        nickname:
+          type: string
+        avatarUrl:
+          type: string
+          nullable: true
+        points:
+          type: integer
+        solvedCtfCount:
+          type: integer
+        completedLessonsCount:
+          type: integer
+        titles:
+          type: array
+          items:
+            type: string
+      required: [rank, userId, nickname, points, solvedCtfCount, completedLessonsCount, titles]
+
+    ScoreboardResponse:
+      type: object
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/ScoreboardEntry"
+        total:
+          type: integer
+        currentUserRank:
+          type: integer
+          nullable: true
+      required: [entries, total]
+
+    # Competitions
+    Competition:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        type:
+          type: string
+          enum: [public, private]
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [upcoming, active, ended]
+        participantCount:
+          type: integer
+        ctfCount:
+          type: integer
+        isJoined:
+          type: boolean
+      required: [id, name, type, startTime, endTime, status, participantCount, ctfCount, isJoined]
+
+    CompetitionDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        type:
+          type: string
+          enum: [public, private]
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [upcoming, active, ended]
+        participantCount:
+          type: integer
+        isJoined:
+          type: boolean
+        challenges:
+          type: array
+          items:
+            $ref: "#/components/schemas/CtfChallenge"
+        certificateUrl:
+          type: string
+          nullable: true
+      required: [id, name, type, startTime, endTime, status, participantCount, isJoined, challenges]
+
+    # Profile
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        nickname:
+          type: string
+        email:
+          type: string
+        avatarUrl:
+          type: string
+          nullable: true
+        points:
+          type: integer
+        rank:
+          type: integer
+        isBlocked:
+          type: boolean
+        solvedCtf:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
+              category:
+                type: string
+              points:
+                type: integer
+              solvedAt:
+                type: string
+                format: date-time
+            required: [id, name, category, points, solvedAt]
+        completedLessons:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              title:
+                type: string
+              points:
+                type: integer
+              completedAt:
+                type: string
+                format: date-time
+            required: [id, title, points, completedAt]
+        competitionHistory:
+          type: array
+          items:
+            type: object
+            properties:
+              competitionId:
+                type: integer
+              competitionName:
+                type: string
+              rank:
+                type: integer
+              points:
+                type: integer
+            required: [competitionId, competitionName, rank, points]
+        titles:
+          type: array
+          items:
+            $ref: "#/components/schemas/Title"
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, nickname, email, points, rank, isBlocked, solvedCtf, completedLessons, competitionHistory, titles, createdAt]
+
+    UpdateProfileBody:
+      type: object
+      properties:
+        nickname:
+          type: string
+          minLength: 3
+          maxLength: 32
+
+    AvatarResponse:
+      type: object
+      properties:
+        avatarUrl:
+          type: string
+      required: [avatarUrl]
+
+    Title:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        category:
+          type: string
+        points:
+          type: integer
+          description: Bonus points for earning this title
+        earnedAt:
+          type: string
+          format: date-time
+          nullable: true
+      required: [id, name, category, points]
+
+    # Admin
+    AdminDashboard:
+      type: object
+      properties:
+        totalUsers:
+          type: integer
+        activeUsers:
+          type: integer
+        totalCtf:
+          type: integer
+        totalLessons:
+          type: integer
+        totalCompetitions:
+          type: integer
+        averageTestResult:
+          type: number
+        mostSolvedCtf:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
+              solvedCount:
+                type: integer
+            required: [id, name, solvedCount]
+        mostActiveUsers:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              nickname:
+                type: string
+              points:
+                type: integer
+              solvedCount:
+                type: integer
+            required: [id, nickname, points, solvedCount]
+        blockedTasksCount:
+          type: integer
+      required: [totalUsers, activeUsers, totalCtf, totalLessons, totalCompetitions, averageTestResult, mostSolvedCtf, mostActiveUsers, blockedTasksCount]
+
+    AdminUsersResponse:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: "#/components/schemas/User"
+        total:
+          type: integer
+      required: [users, total]
+
+    BlockedTasksResponse:
+      type: object
+      properties:
+        blockedCtf:
+          type: array
+          items:
+            type: object
+            properties:
+              userId:
+                type: integer
+              nickname:
+                type: string
+              ctfId:
+                type: integer
+              ctfName:
+                type: string
+              reason:
+                type: string
+              blockedAt:
+                type: string
+                format: date-time
+            required: [userId, nickname, ctfId, ctfName, reason, blockedAt]
+        blockedLessons:
+          type: array
+          items:
+            type: object
+            properties:
+              userId:
+                type: integer
+              nickname:
+                type: string
+              lessonId:
+                type: integer
+              lessonTitle:
+                type: string
+              reason:
+                type: string
+              blockedAt:
+                type: string
+                format: date-time
+            required: [userId, nickname, lessonId, lessonTitle, reason, blockedAt]
+      required: [blockedCtf, blockedLessons]
+
+    CreateCtfBody:
+      type: object
+      properties:
+        name:
+          type: string
+        nameUz:
+          type: string
+          nullable: true
+        nameRu:
+          type: string
+          nullable: true
+        description:
+          type: string
+        descriptionUz:
+          type: string
+          nullable: true
+        descriptionRu:
+          type: string
+          nullable: true
+        category:
+          type: string
+        difficulty:
+          type: string
+          enum: [easy, medium, hard, insane]
+        points:
+          type: integer
+        hint:
+          type: string
+          nullable: true
+        flag:
+          type: string
+        fileUrl:
+          type: string
+          nullable: true
+      required: [name, description, category, difficulty, points, flag]
+
+    CreateCompetitionBody:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        type:
+          type: string
+          enum: [public, private]
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        ctfIds:
+          type: array
+          items:
+            type: integer
+      required: [name, type, startTime, endTime, ctfIds]
+
+    CreateLessonBody:
+      type: object
+      properties:
+        title:
+          type: string
+        titleUz:
+          type: string
+          nullable: true
+        titleRu:
+          type: string
+          nullable: true
+        content:
+          type: string
+        contentUz:
+          type: string
+          nullable: true
+        contentRu:
+          type: string
+          nullable: true
+        categoryId:
+          type: integer
+        points:
+          type: integer
+        questions:
+          type: array
+          items:
+            type: object
+            properties:
+              question:
+                type: string
+              questionUz:
+                type: string
+                nullable: true
+              questionRu:
+                type: string
+                nullable: true
+              options:
+                type: array
+                items:
+                  type: string
+              optionsUz:
+                type: array
+                items:
+                  type: string
+                nullable: true
+              optionsRu:
+                type: array
+                items:
+                  type: string
+                nullable: true
+              correctOption:
+                type: integer
+            required: [question, options, correctOption]
+      required: [title, content, categoryId, points, questions]

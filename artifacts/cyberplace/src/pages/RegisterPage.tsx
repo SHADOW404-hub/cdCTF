@@ -155,9 +155,9 @@ export default function RegisterPage() {
                 {captchaUnavailable && !isLocalDev && (
                   <p className="text-xs text-amber-600">
                     {t(
-                      "Captcha could not be loaded. Check the Turnstile site key and allowed domains in Cloudflare.",
-                      "Captcha yuklanmadi. Cloudflare ichida Turnstile site key va ruxsat etilgan domenlarni tekshiring.",
-                      "Captcha не загрузилась. Проверьте site key Turnstile и разрешённые домены в Cloudflare."
+                      "Captcha verification did not finish. Check the Turnstile site key, allowed domains, and CSP rules on Vercel.",
+                      "Captcha tekshiruvi tugamadi. Cloudflare ichida Turnstile site key, ruxsat etilgan domenlar va Vercel CSP qoidalarini tekshiring.",
+                      "Проверка captcha не завершилась. Проверьте site key Turnstile, разрешённые домены и правила CSP в Vercel."
                     )}
                   </p>
                 )}

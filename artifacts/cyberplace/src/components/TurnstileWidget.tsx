@@ -75,23 +75,35 @@ export function TurnstileWidget({ onTokenChange, onError, onReadyChange }: Props
 
   useEffect(() => {
     if (!siteKey || !scriptReady || !window.turnstile || widgetIdRef.current) return;
+    let timeoutId: number | null = null;
 
     widgetIdRef.current = window.turnstile.render(document.getElementById(containerId) as HTMLElement, {
       sitekey: siteKey,
       theme: "auto",
       callback: (token) => {
+        if (timeoutId) window.clearTimeout(timeoutId);
         onReadyChange?.(true);
         onTokenChange(token);
       },
-      "expired-callback": () => onTokenChange(""),
+      "expired-callback": () => {
+        onTokenChange("");
+      },
       "error-callback": () => {
+        if (timeoutId) window.clearTimeout(timeoutId);
         onReadyChange?.(false);
         onTokenChange("");
         onError?.();
       },
     });
 
+    timeoutId = window.setTimeout(() => {
+      onReadyChange?.(false);
+      onTokenChange("");
+      onError?.();
+    }, 15000);
+
     return () => {
+      if (timeoutId) window.clearTimeout(timeoutId);
       if (widgetIdRef.current && window.turnstile?.remove) {
         window.turnstile.remove(widgetIdRef.current);
         widgetIdRef.current = null;

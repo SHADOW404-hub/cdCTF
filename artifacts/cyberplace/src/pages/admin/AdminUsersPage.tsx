@@ -8,6 +8,7 @@ import { useLang } from "@/lib/LanguageContext";
 import { useAdminListUsers, getAdminListUsersQueryKey, useAdminBlockUser, useAdminUnblockUser } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { normalizeArray } from "@/lib/api-shapes";
 
 export default function AdminUsersPage() {
   const { t } = useLang();
@@ -19,6 +20,8 @@ export default function AdminUsersPage() {
     { search: search || undefined },
     { query: { queryKey: getAdminListUsersQueryKey({ search: search || undefined }) } }
   );
+  const users = normalizeArray<any>(data?.users, ["users", "data", "items"]);
+  const total = typeof data?.total === "number" ? data.total : users.length;
 
   const blockUser = useAdminBlockUser();
   const unblockUser = useAdminUnblockUser();
@@ -43,7 +46,7 @@ export default function AdminUsersPage() {
       <main className="flex-1 p-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-xl font-bold">{t("Users", "Foydalanuvchilar", "Пользователи")}</h1>
-          <span className="text-sm text-muted-foreground">{data ? `${data.total} ${t("total", "jami", "всего")}` : ""}</span>
+          <span className="text-sm text-muted-foreground">{data ? `${total} ${t("total", "jami", "всего")}` : ""}</span>
         </div>
 
         <div className="relative mb-4 max-w-sm">
@@ -70,7 +73,7 @@ export default function AdminUsersPage() {
                 </tr>
               </thead>
               <tbody className="bg-card divide-y divide-border">
-                {data?.users.map((user, idx) => (
+                {users.map((user, idx) => (
                   <tr key={user.id} className="hover:bg-muted/20 transition-colors" data-testid={`row-user-${user.id}`}>
                     <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{idx + 1}</td>
                     <td className="px-4 py-3 font-medium">{user.nickname}</td>

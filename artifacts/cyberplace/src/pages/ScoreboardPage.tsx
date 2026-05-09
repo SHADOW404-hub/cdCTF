@@ -4,6 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useLang } from "@/lib/LanguageContext";
 import { useGetScoreboard, getGetScoreboardQueryKey } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/AuthContext";
+import { normalizeArray } from "@/lib/api-shapes";
 
 export default function ScoreboardPage() {
   const { t } = useLang();
@@ -11,6 +12,8 @@ export default function ScoreboardPage() {
   const { data, isLoading } = useGetScoreboard({ limit: 100 }, {
     query: { queryKey: getGetScoreboardQueryKey({ limit: 100 }) },
   });
+  const entries = normalizeArray<any>(data?.entries, ["entries", "data", "items"]);
+  const total = typeof data?.total === "number" ? data.total : entries.length;
 
   const RANK_COLORS = ["text-yellow-500", "text-gray-400", "text-orange-600"];
 
@@ -21,7 +24,7 @@ export default function ScoreboardPage() {
           <Trophy className="w-6 h-6 text-primary" />
           <div>
             <h1 className="text-2xl font-bold">{t("Scoreboard", "Reyting", "Рейтинг")}</h1>
-            <p className="text-sm text-muted-foreground">{data ? `${data.total} ${t("players", "o'yinchi", "игроков")}` : ""}</p>
+            <p className="text-sm text-muted-foreground">{data ? `${total} ${t("players", "o'yinchi", "игроков")}` : ""}</p>
           </div>
         </div>
 
@@ -39,9 +42,10 @@ export default function ScoreboardPage() {
           </div>
         ) : (
           <div className="space-y-1.5">
-            {data?.entries.map((entry, i) => {
+            {entries.map((entry, i) => {
               const isMe = user?.id === entry.userId;
               const rankColor = RANK_COLORS[i] ?? "text-muted-foreground";
+              const titles = normalizeArray<string>(entry.titles, ["titles", "data", "items"]);
               return (
                 <Link href={`/profile/${entry.userId}`} key={entry.userId}>
                   <div
@@ -64,7 +68,7 @@ export default function ScoreboardPage() {
                         {isMe && <span className="text-xs text-primary">(you)</span>}
                       </div>
                       <div className="flex gap-1.5 mt-0.5 flex-wrap">
-                        {entry.titles.map(title => (
+                        {titles.map(title => (
                           <span key={title} className="text-[10px] text-primary/70 font-mono bg-primary/5 px-1.5 py-0.5 rounded">{title}</span>
                         ))}
                       </div>

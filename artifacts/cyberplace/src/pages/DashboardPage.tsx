@@ -5,6 +5,7 @@ import { useLang } from "@/lib/LanguageContext";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { normalizeArray } from "@/lib/api-shapes";
 
 type DashboardResponse = {
   user: { id: number; nickname: string; points: number; rank: number };
@@ -49,6 +50,10 @@ export default function DashboardPage() {
 
   if (!data) return null;
 
+  const solvedCtf = normalizeArray<DashboardResponse["recent"]["solvedCtf"][number]>(data.recent?.solvedCtf, ["solvedCtf", "data", "items"]);
+  const completedLessons = normalizeArray<DashboardResponse["recent"]["completedLessons"][number]>(data.recent?.completedLessons, ["completedLessons", "data", "items"]);
+  const titles = normalizeArray<DashboardResponse["titles"][number]>(data.titles, ["titles", "data", "items"]);
+
   return (
     <div className="min-h-screen bg-background pt-14">
       <div className="max-w-5xl mx-auto px-4 py-8">
@@ -88,19 +93,19 @@ export default function DashboardPage() {
               <h2 className="font-semibold">{t("Recent Activity", "So'nggi faollik", "Последняя активность")}</h2>
             </div>
             <div className="space-y-3">
-              {data.recent.solvedCtf.map((item) => (
+              {solvedCtf.map((item) => (
                 <Link key={`ctf-${item.ctfId}`} href={`/ctf/${item.ctfId}`} className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm">
                   <span>{t("Solved challenge", "Yechilgan topshiriq", "Решённое задание")} #{item.ctfId}</span>
                   <ChevronRight className="w-4 h-4 text-muted-foreground" />
                 </Link>
               ))}
-              {data.recent.completedLessons.map((item) => (
+              {completedLessons.map((item) => (
                 <Link key={`lesson-${item.lessonId}`} href={`/learn/${item.lessonId}`} className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm">
                   <span>{t("Completed lesson", "Tugatilgan dars", "Завершённый урок")} #{item.lessonId}</span>
                   <ChevronRight className="w-4 h-4 text-muted-foreground" />
                 </Link>
               ))}
-              {data.recent.solvedCtf.length === 0 && data.recent.completedLessons.length === 0 && (
+              {solvedCtf.length === 0 && completedLessons.length === 0 && (
                 <p className="text-sm text-muted-foreground">{t("No recent activity yet", "Hali faollik yo'q", "Пока нет активности")}</p>
               )}
             </div>
@@ -112,7 +117,7 @@ export default function DashboardPage() {
               <h2 className="font-semibold">{t("Earned Titles", "Olingan unvonlar", "Полученные титулы")}</h2>
             </div>
             <div className="flex flex-wrap gap-2">
-              {data.titles.length > 0 ? data.titles.map((title, index) => (
+              {titles.length > 0 ? titles.map((title, index) => (
                 <span key={`${title.id ?? "title"}-${index}`} className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
                   {title.name ?? t("Untitled", "Nomsiz", "Без названия")}
                 </span>

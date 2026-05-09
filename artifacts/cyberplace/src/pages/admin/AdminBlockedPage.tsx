@@ -6,6 +6,7 @@ import { useLang } from "@/lib/LanguageContext";
 import { useAdminGetBlockedTasks, getAdminGetBlockedTasksQueryKey, useAdminUnblockTask, useAdminUnblockCtfUser } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { normalizeArray } from "@/lib/api-shapes";
 
 export default function AdminBlockedPage() {
   const { t } = useLang();
@@ -13,6 +14,8 @@ export default function AdminBlockedPage() {
   const qc = useQueryClient();
 
   const { data, isLoading } = useAdminGetBlockedTasks({ query: { queryKey: getAdminGetBlockedTasksQueryKey() } });
+  const blockedCtf = normalizeArray<any>(data?.blockedCtf, ["blockedCtf", "ctf", "data", "items"]);
+  const blockedLessons = normalizeArray<any>(data?.blockedLessons, ["blockedLessons", "lessons", "data", "items"]);
   const unblockTask = useAdminUnblockTask();
   const unblockCtfUser = useAdminUnblockCtfUser();
 
@@ -43,9 +46,9 @@ export default function AdminBlockedPage() {
             {/* Blocked CTFs */}
             <div>
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
-                <Shield className="w-4 h-4" /> {t("Blocked CTF Users", "Bloklangan CTF Foydalanuvchilar", "Заблокированные CTF")} ({data?.blockedCtf.length ?? 0})
+                <Shield className="w-4 h-4" /> {t("Blocked CTF Users", "Bloklangan CTF Foydalanuvchilar", "Заблокированные CTF")} ({blockedCtf.length})
               </h2>
-              {data?.blockedCtf.length === 0 ? (
+              {blockedCtf.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-4 text-center">{t("No blocked CTF users", "Bloklangan foydalanuvchilar yo'q", "Нет заблокированных")}</p>
               ) : (
                 <div className="rounded-xl border border-border overflow-hidden">
@@ -60,7 +63,7 @@ export default function AdminBlockedPage() {
                       </tr>
                     </thead>
                     <tbody className="bg-card divide-y divide-border">
-                      {data?.blockedCtf.map((b, i) => (
+                      {blockedCtf.map((b, i) => (
                         <tr key={i} className="hover:bg-muted/20" data-testid={`row-blocked-ctf-${i}`}>
                           <td className="px-4 py-3 font-medium">{b.nickname}</td>
                           <td className="px-4 py-3 text-muted-foreground">{b.ctfName}</td>
@@ -82,9 +85,9 @@ export default function AdminBlockedPage() {
             {/* Blocked Lessons */}
             <div>
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-center gap-2">
-                <BookOpen className="w-4 h-4" /> {t("Blocked Lesson Users", "Bloklangan Dars Foydalanuvchilar", "Заблокированные уроки")} ({data?.blockedLessons.length ?? 0})
+                <BookOpen className="w-4 h-4" /> {t("Blocked Lesson Users", "Bloklangan Dars Foydalanuvchilar", "Заблокированные уроки")} ({blockedLessons.length})
               </h2>
-              {data?.blockedLessons.length === 0 ? (
+              {blockedLessons.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-4 text-center">{t("No blocked lesson users", "Bloklangan foydalanuvchilar yo'q", "Нет заблокированных")}</p>
               ) : (
                 <div className="rounded-xl border border-border overflow-hidden">
@@ -99,7 +102,7 @@ export default function AdminBlockedPage() {
                       </tr>
                     </thead>
                     <tbody className="bg-card divide-y divide-border">
-                      {data?.blockedLessons.map((b, i) => (
+                      {blockedLessons.map((b, i) => (
                         <tr key={i} className="hover:bg-muted/20" data-testid={`row-blocked-lesson-${i}`}>
                           <td className="px-4 py-3 font-medium">{b.nickname}</td>
                           <td className="px-4 py-3 text-muted-foreground">{b.lessonTitle}</td>

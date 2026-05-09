@@ -3,12 +3,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { useLang } from "@/lib/LanguageContext";
 import { useGetAdminDashboard, getGetAdminDashboardQueryKey } from "@workspace/api-client-react";
+import { normalizeArray } from "@/lib/api-shapes";
 
 export default function AdminDashboardPage() {
   const { t } = useLang();
   const { data, isLoading } = useGetAdminDashboard({
     query: { queryKey: getGetAdminDashboardQueryKey() },
   });
+  const mostSolvedCtf = normalizeArray<any>(data?.mostSolvedCtf, ["mostSolvedCtf", "ctf", "data", "items"]);
+  const mostActiveUsers = normalizeArray<any>(data?.mostActiveUsers, ["mostActiveUsers", "users", "data", "items"]);
 
   const stats = data ? [
     { icon: Users, label: t("Total Users", "Jami Foydalanuvchilar", "Всего пользователей"), value: data.totalUsers, sub: `${data.activeUsers} ${t("active", "faol", "активных")}` },
@@ -51,7 +54,7 @@ export default function AdminDashboardPage() {
             <div>
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">{t("Most Solved CTFs", "Ko'p Yechilgan CTFlar", "Самые решаемые CTF")}</h2>
               <div className="space-y-1.5">
-                {data.mostSolvedCtf.map((ctf, i) => (
+                {mostSolvedCtf.map((ctf, i) => (
                   <div key={ctf.id} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card text-sm" data-testid={`row-most-solved-${ctf.id}`}>
                     <span className="w-5 font-mono text-muted-foreground text-xs">#{i + 1}</span>
                     <span className="flex-1 truncate">{ctf.name}</span>
@@ -65,7 +68,7 @@ export default function AdminDashboardPage() {
             <div>
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">{t("Most Active Users", "Faol Foydalanuvchilar", "Самые активные")}</h2>
               <div className="space-y-1.5">
-                {data.mostActiveUsers.map((u, i) => (
+                {mostActiveUsers.map((u, i) => (
                   <div key={u.id} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card text-sm" data-testid={`row-active-user-${u.id}`}>
                     <span className="w-5 font-mono text-muted-foreground text-xs">#{i + 1}</span>
                     <span className="flex-1 truncate font-medium">{u.nickname}</span>

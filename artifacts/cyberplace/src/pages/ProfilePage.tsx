@@ -5,6 +5,7 @@ import { useLang } from "@/lib/LanguageContext";
 import { useGetUserProfile, getGetUserProfileQueryKey } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
+import { normalizeArray } from "@/lib/api-shapes";
 
 export default function ProfilePage() {
   const [, params] = useRoute("/profile/:id");
@@ -37,6 +38,10 @@ export default function ProfilePage() {
   }
 
   const isOwn = currentUser?.id === profile.id;
+  const titles = normalizeArray<(typeof profile.titles)[number]>(profile.titles, ["titles", "data", "items"]);
+  const solvedCtf = normalizeArray<(typeof profile.solvedCtf)[number]>(profile.solvedCtf, ["solvedCtf", "data", "items"]);
+  const completedLessons = normalizeArray<(typeof profile.completedLessons)[number]>(profile.completedLessons, ["completedLessons", "data", "items"]);
+  const competitionHistory = normalizeArray<(typeof profile.competitionHistory)[number]>(profile.competitionHistory, ["competitionHistory", "competitions", "data", "items"]);
 
   return (
     <div className="min-h-screen bg-background pt-14">
@@ -72,9 +77,9 @@ export default function ProfilePage() {
             </div>
 
             {/* Titles */}
-            {profile.titles.length > 0 && (
+            {titles.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-3">
-                {profile.titles.map(title => (
+                {titles.map(title => (
                   <span key={title.id} className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium" data-testid={`badge-title-${title.id}`}>
                     <Star className="w-2.5 h-2.5" /> {title.name}
                   </span>
@@ -87,15 +92,15 @@ export default function ProfilePage() {
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-8">
           <div className="p-4 rounded-xl border border-border bg-card text-center" data-testid="stat-solved-ctf">
-            <div className="text-2xl font-mono font-bold text-primary">{profile.solvedCtf.length}</div>
+            <div className="text-2xl font-mono font-bold text-primary">{solvedCtf.length}</div>
             <div className="text-xs text-muted-foreground mt-1">{t("CTFs Solved", "CTF Yechilgan", "CTF решено")}</div>
           </div>
           <div className="p-4 rounded-xl border border-border bg-card text-center" data-testid="stat-completed-lessons">
-            <div className="text-2xl font-mono font-bold text-primary">{profile.completedLessons.length}</div>
+            <div className="text-2xl font-mono font-bold text-primary">{completedLessons.length}</div>
             <div className="text-xs text-muted-foreground mt-1">{t("Lessons Done", "Darslar Tugatilgan", "Уроков завершено")}</div>
           </div>
           <div className="p-4 rounded-xl border border-border bg-card text-center" data-testid="stat-competitions">
-            <div className="text-2xl font-mono font-bold text-primary">{profile.competitionHistory.length}</div>
+            <div className="text-2xl font-mono font-bold text-primary">{competitionHistory.length}</div>
             <div className="text-xs text-muted-foreground mt-1">{t("Competitions", "Musobaqalar", "Соревнований")}</div>
           </div>
         </div>
@@ -107,9 +112,9 @@ export default function ProfilePage() {
               <Flag className="w-4 h-4" /> {t("Solved Challenges", "Yechilgan Topshiriqlar", "Решённые задания")}
             </h2>
             <div className="space-y-1.5 max-h-64 overflow-y-auto">
-              {profile.solvedCtf.length === 0 ? (
+              {solvedCtf.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-4 text-center">{t("No challenges solved yet", "Topshiriqlar yechilmagan", "Нет решённых заданий")}</p>
-              ) : profile.solvedCtf.map(ctf => (
+              ) : solvedCtf.map(ctf => (
                 <div key={ctf.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-border bg-card text-sm" data-testid={`row-solved-ctf-${ctf.id}`}>
                   <Target className="w-3.5 h-3.5 text-primary flex-shrink-0" />
                   <span className="flex-1 truncate">{ctf.name}</span>
@@ -126,9 +131,9 @@ export default function ProfilePage() {
               <BookOpen className="w-4 h-4" /> {t("Completed Lessons", "Tugatilgan Darslar", "Завершённые уроки")}
             </h2>
             <div className="space-y-1.5 max-h-64 overflow-y-auto">
-              {profile.completedLessons.length === 0 ? (
+              {completedLessons.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-4 text-center">{t("No lessons completed yet", "Darslar tugatilmagan", "Нет завершённых уроков")}</p>
-              ) : profile.completedLessons.map(lesson => (
+              ) : completedLessons.map(lesson => (
                 <div key={lesson.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-border bg-card text-sm" data-testid={`row-completed-lesson-${lesson.id}`}>
                   <BookOpen className="w-3.5 h-3.5 text-primary flex-shrink-0" />
                   <span className="flex-1 truncate">{lesson.title}</span>
@@ -139,13 +144,13 @@ export default function ProfilePage() {
           </div>
 
           {/* Competition History */}
-          {profile.competitionHistory.length > 0 && (
+          {competitionHistory.length > 0 && (
             <div className="md:col-span-2">
               <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
                 <Trophy className="w-4 h-4" /> {t("Competition History", "Musobaqa Tarixi", "История соревнований")}
               </h2>
               <div className="grid sm:grid-cols-2 gap-2">
-                {profile.competitionHistory.map(comp => (
+                {competitionHistory.map(comp => (
                   <div key={comp.competitionId} className="flex items-center justify-between p-3 rounded-lg border border-border bg-card text-sm" data-testid={`row-comp-history-${comp.competitionId}`}>
                     <span className="truncate font-medium">{comp.competitionName}</span>
                     <div className="flex items-center gap-2 ml-2">

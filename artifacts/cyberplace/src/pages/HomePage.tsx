@@ -3,14 +3,15 @@ import { Shield, Target, BookOpen, Trophy, Users, Zap, ChevronRight, Lock, Code,
 import { Button } from "@/components/ui/button";
 import { useLang } from "@/lib/LanguageContext";
 import { useGetCtfStats, useGetScoreboard } from "@workspace/api-client-react";
+import { normalizeArray } from "@/lib/api-shapes";
 
 export default function HomePage() {
   const { t } = useLang();
   const { data: stats } = useGetCtfStats();
   const { data: scoreboard } = useGetScoreboard({ limit: 5 });
-  const categoryCounts = stats?.categoryCounts ?? [];
-  const mostSolved = stats?.mostSolved ?? [];
-  const scoreboardEntries = scoreboard?.entries ?? [];
+  const categoryCounts = normalizeArray<any>(stats?.categoryCounts, ["categoryCounts", "categories", "data", "items"]);
+  const mostSolved = normalizeArray<any>(stats?.mostSolved, ["mostSolved", "data", "items"]);
+  const scoreboardEntries = normalizeArray<any>(scoreboard?.entries, ["entries", "data", "items"]);
 
   const features = [
     {
@@ -171,7 +172,7 @@ export default function HomePage() {
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-sm truncate">{entry.nickname}</div>
                       <div className="flex gap-2 mt-0.5">
-                        {entry.titles.map(title => (
+                        {normalizeArray<string>(entry.titles, ["titles", "data", "items"]).map(title => (
                           <span key={title} className="text-xs text-primary/70 font-mono">{title}</span>
                         ))}
                       </div>

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ShieldCheck } from "lucide-react";
 import { AdminSidebar } from "@/components/AdminSidebar";
 import { useLang } from "@/lib/LanguageContext";
+import { normalizeArray } from "@/lib/api-shapes";
 
 type AuditLog = {
   id: number;
@@ -23,6 +24,7 @@ async function fetchAuditLogs() {
 export default function AdminAuditPage() {
   const { t } = useLang();
   const { data, isLoading } = useQuery({ queryKey: ["admin-audit-logs"], queryFn: fetchAuditLogs });
+  const logs = normalizeArray<AuditLog>(data?.logs, ["logs", "data", "items"]);
 
   return (
     <div className="flex min-h-screen bg-background pt-14">
@@ -48,7 +50,7 @@ export default function AdminAuditPage() {
               {isLoading && (
                 <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">{t("Loading...", "Yuklanmoqda...", "Загрузка...")}</td></tr>
               )}
-              {data?.logs.map(log => (
+              {logs.map(log => (
                 <tr key={log.id}>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(log.createdAt).toLocaleString()}</td>
                   <td className="px-4 py-3 font-mono text-xs">{log.actorUserId ?? "-"}</td>
@@ -57,7 +59,7 @@ export default function AdminAuditPage() {
                   <td className="px-4 py-3 text-xs text-muted-foreground">{log.ipAddress ?? "-"}</td>
                 </tr>
               ))}
-              {!isLoading && data?.logs.length === 0 && (
+              {!isLoading && logs.length === 0 && (
                 <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">{t("No audit logs yet", "Hali audit yozuvlari yo'q", "Журнал аудита пока пуст")}</td></tr>
               )}
             </tbody>

@@ -6,6 +6,9 @@ import { Progress } from "@/components/ui/progress";
 import { useLang } from "@/lib/LanguageContext";
 import { useStartLessonTest, useSubmitLessonTest, useReportTestEscape } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
+import { normalizeArray } from "@/lib/api-shapes";
+
+type TestQuestion = { id: number; question: string; options: string[] };
 
 export default function LessonTestPage() {
   const [, params] = useRoute("/learn/:id/test");
@@ -15,7 +18,7 @@ export default function LessonTestPage() {
   const { toast } = useToast();
 
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [questions, setQuestions] = useState<Array<{ id: number; question: string; options: string[] }>>([]);
+  const [questions, setQuestions] = useState<TestQuestion[]>([]);
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [attemptsLeft, setAttemptsLeft] = useState(3);
   const [result, setResult] = useState<{ passed: boolean; score: number; correctCount: number; totalCount: number; pointsEarned: number } | null>(null);
@@ -103,7 +106,7 @@ export default function LessonTestPage() {
       {
         onSuccess: (res) => {
           setSessionId(res.sessionId);
-          setQuestions(res.questions as typeof questions);
+          setQuestions(normalizeArray<TestQuestion>(res.questions, ["questions", "data", "items"]));
           setAttemptsLeft(res.attemptsLeft);
           setLoading(false);
         },
@@ -179,7 +182,7 @@ export default function LessonTestPage() {
               {t("Back to Lesson", "Darsga Qaytish", "К уроку")}
             </Button>
             {!result.passed && attemptsLeft > 0 && (
-              <Button onClick={() => { setResult(null); setAnswers({}); setLoading(true); startTest.mutate({ id }, { onSuccess: (res) => { setSessionId(res.sessionId); setQuestions(res.questions as typeof questions); setAttemptsLeft(res.attemptsLeft); setLoading(false); } }); }}>
+              <Button onClick={() => { setResult(null); setAnswers({}); setLoading(true); startTest.mutate({ id }, { onSuccess: (res) => { setSessionId(res.sessionId); setQuestions(normalizeArray<TestQuestion>(res.questions, ["questions", "data", "items"])); setAttemptsLeft(res.attemptsLeft); setLoading(false); } }); }}>
                 {t("Try Again", "Qayta Urinish", "Попробовать снова")}
               </Button>
             )}
@@ -197,8 +200,9 @@ export default function LessonTestPage() {
     );
   }
 
+  const questionList = normalizeArray<TestQuestion>(questions, ["questions", "data", "items"]);
   const answered = Object.keys(answers).length;
-  const progress = (answered / questions.length) * 100;
+  const progress = questionList.length > 0 ? (answered / questionList.length) * 100 : 0;
 
   if (!fullscreenStarted || !fullscreenActive) {
     return (
@@ -239,17 +243,19 @@ export default function LessonTestPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-xl font-bold">{t("Lesson Test", "Dars Testi", "Тест урока")}</h1>
-          <span className="text-sm text-muted-foreground">{answered}/{questions.length} {t("answered", "javob berildi", "отвечено")}</span>
+          <span className="text-sm text-muted-foreground">{answered}/{questionList.length} {t("answered", "javob berildi", "отвечено")}</span>
         </div>
         <Progress value={progress} className="mb-8 h-1.5" />
 
         {/* Questions */}
         <div className="space-y-6">
-          {questions.map((q, qi) => (
+          {questionList.map((q, qi) => {
+            const options = normalizeArray<string>(q.options, ["options", "data", "items"]);
+            return (
             <div key={q.id} className="p-5 rounded-xl border border-border bg-card" data-testid={`card-question-${qi}`}>
               <p className="font-medium mb-4 text-sm">{qi + 1}. {q.question}</p>
               <div className="space-y-2">
-                {q.options.map((opt, oi) => (
+                {options.map((opt, oi) => (
                   <button
                     key={oi}
                     onClick={() => setAnswers(prev => ({ ...prev, [q.id]: oi }))}
@@ -266,14 +272,15 @@ export default function LessonTestPage() {
                 ))}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="mt-8 flex items-center justify-between">
           <p className="text-xs text-muted-foreground">{t("Pass threshold: 80%", "O'tish chegarasi: 80%", "Порог прохождения: 80%")}</p>
           <Button
             onClick={handleSubmit}
-            disabled={answered < questions.length || submitTest.isPending}
+            disabled={answered < questionList.length || submitTest.isPending}
             className="gap-2"
             data-testid="button-submit-test"
           >

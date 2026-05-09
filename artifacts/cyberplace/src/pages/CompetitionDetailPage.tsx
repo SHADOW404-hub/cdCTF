@@ -10,6 +10,7 @@ import { useGetCompetition, getGetCompetitionQueryKey, useGetCompetitionScoreboa
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
 import { Link } from "wouter";
+import { normalizeArray } from "@/lib/api-shapes";
 
 export default function CompetitionDetailPage() {
   const [, params] = useRoute("/competitions/:id");
@@ -70,6 +71,9 @@ export default function CompetitionDetailPage() {
     );
   }
 
+  const challenges = normalizeArray<any>(comp.challenges, ["challenges", "data", "items"]);
+  const scoreboard = normalizeArray<any>(scoreboardData, ["scoreboard", "entries", "data", "items"]);
+
   return (
     <div className="min-h-screen bg-background pt-14">
       <div className="max-w-4xl mx-auto px-4 py-8">
@@ -122,10 +126,10 @@ export default function CompetitionDetailPage() {
           {/* CTF List */}
           <div>
             <h2 className="text-base font-semibold mb-4 flex items-center gap-2">
-              <Flag className="w-4 h-4 text-primary" /> {t("Challenges", "Topshiriqlar", "Задания")} ({comp.challenges.length})
+              <Flag className="w-4 h-4 text-primary" /> {t("Challenges", "Topshiriqlar", "Задания")} ({challenges.length})
             </h2>
             <div className="space-y-2">
-              {comp.challenges.map(ch => (
+              {challenges.map(ch => (
                 <Link href={comp.isJoined && comp.status === "active" ? `/competitions/${comp.id}/ctf/${ch.id}` : `/ctf/${ch.id}`} key={ch.id}>
                   <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card hover:border-primary/30 transition-colors cursor-pointer" data-testid={`card-comp-ctf-${ch.id}`}>
                     <DifficultyBadge difficulty={ch.difficulty} />
@@ -134,20 +138,20 @@ export default function CompetitionDetailPage() {
                   </div>
                 </Link>
               ))}
-              {comp.challenges.length === 0 && (
+              {challenges.length === 0 && (
                 <p className="text-sm text-muted-foreground text-center py-4">{t("No challenges added yet", "Topshiriqlar qo'shilmagan", "Задания ещё не добавлены")}</p>
               )}
             </div>
           </div>
 
           {/* Scoreboard */}
-          {comp.status !== "upcoming" && scoreboardData && (
+          {comp.status !== "upcoming" && scoreboard.length > 0 && (
             <div>
               <h2 className="text-base font-semibold mb-4 flex items-center gap-2">
                 <Trophy className="w-4 h-4 text-primary" /> {t("Scoreboard", "Reyting", "Рейтинг")}
               </h2>
               <div className="space-y-1.5">
-                {scoreboardData.slice(0, 10).map((entry) => (
+                {scoreboard.slice(0, 10).map((entry) => (
                   <div key={entry.userId} className="flex items-center gap-3 p-3 rounded-lg border border-border bg-card text-sm" data-testid={`row-comp-scoreboard-${entry.userId}`}>
                     <span className="w-5 font-mono text-muted-foreground">#{entry.rank}</span>
                     <span className="flex-1 font-medium truncate">{entry.nickname}</span>

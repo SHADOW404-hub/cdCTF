@@ -14,14 +14,25 @@ const DEFAULT_ALLOWED_ORIGINS = [
   "http://127.0.0.1:8080",
 ];
 
+function getAllowedOrigins() {
+  const configured = process.env.CORS_ORIGINS?.split(",")
+    .map(item => item.trim())
+    .filter(Boolean) ?? [];
+
+  const derived = [
+    process.env.APP_BASE_URL,
+    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : undefined,
+  ].filter((item): item is string => Boolean(item));
+
+  return [...new Set([...configured, ...derived, ...DEFAULT_ALLOWED_ORIGINS])];
+}
+
 export const corsOptions: CorsOptions = {
   origin(origin, callback) {
     if (!origin) return callback(null, true);
 
-    const configured = process.env.CORS_ORIGINS?.split(",")
-      .map(item => item.trim())
-      .filter(Boolean);
-    const allowedOrigins = configured?.length ? configured : DEFAULT_ALLOWED_ORIGINS;
+    const allowedOrigins = getAllowedOrigins();
 
     if (allowedOrigins.includes(origin)) return callback(null, true);
     return callback(new Error("Origin is not allowed by CORS"));

@@ -18,13 +18,14 @@ router.post("/ctf-file/sign", authenticateToken, requireAdmin, async (req, res) 
     const result = await createSignedCtfUpload({ filename, size });
     return res.status(201).json(result);
   } catch (error) {
+    logger.error({ err: error }, "Upload sign error detail");
     if (error instanceof StorageUploadError) {
       const status = (error.status >= 400 && error.status < 500) || error.status === 501 ? error.status : 502;
       return res.status(status).json({ error: error.message || "Storage upload failed" });
     }
-    return res.status(502).json({ error: "Storage upload failed" });
-
+    return res.status(502).json({ error: error instanceof Error ? error.message : "Storage upload failed" });
   }
+
 });
 
 router.post("/ctf-file", authenticateToken, requireAdmin, upload.single("file"), async (req, res) => {
@@ -40,14 +41,16 @@ router.post("/ctf-file", authenticateToken, requireAdmin, upload.single("file"),
 
     res.status(201).json({ fileUrl: result.publicUrl, path: result.path });
   } catch (error) {
+    logger.error({ err: error }, "Direct upload error detail");
     if (error instanceof StorageUploadError) {
       const status = error.status === 413 ? 413 : 502;
       return res.status(status).json({
         error: status === 413 ? "Uploaded file is too large for storage" : "Storage upload failed",
       });
     }
-    return res.status(502).json({ error: "Storage upload failed" });
+    return res.status(502).json({ error: error instanceof Error ? error.message : "Storage upload failed" });
   }
+
 });
 
 export default router;

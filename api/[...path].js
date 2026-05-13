@@ -8,23 +8,23 @@ function loadServerless() {
   return serverlessPromise;
 }
 
-async function ensureReady() {
-  const { ensureDatabaseShape } = await loadServerless();
-  if (!readyPromise) {
-    readyPromise = ensureDatabaseShape();
-  }
-  return readyPromise;
-}
-
 export default async function handler(req, res) {
   try {
-    await ensureReady();
-    const { app } = await loadServerless();
+    const { app, ensureDatabaseShape } = await loadServerless();
+    if (!readyPromise) {
+      readyPromise = ensureDatabaseShape();
+    }
+    await readyPromise;
     return app(req, res);
   } catch (err) {
-    const { logger, reportErrorToSentry } = await loadServerless();
-    logger.error({ err }, "Vercel function initialization failed");
-    void reportErrorToSentry(err, { type: "vercelFunctionInitialization" });
-    return res.status(500).json({ error: "Internal server error" });
+    console.error("Vercel function initialization failed:", err);
+    try {
+      const { logger, reportErrorToSentry } = await loadServerless();
+      logger.error({ err }, "Vercel function initialization failed");
+      void reportErrorToSentry(err, { type: "vercelFunctionInitialization" });
+    } catch (loggingErr) {
+      console.error("Critical: Logging failed too:", loggingErr);
+    }
+    return res.status(500).json({ error: "Internal server error", details: err.message });
   }
 }

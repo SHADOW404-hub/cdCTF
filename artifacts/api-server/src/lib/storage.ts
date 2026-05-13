@@ -18,9 +18,18 @@ function getSupabaseConfig() {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const bucket = process.env.SUPABASE_STORAGE_BUCKET || "cdctf";
-  if (!url || !key) return null;
+  
+  if (!url || !key) {
+    const missing = [];
+    if (!url) missing.push("SUPABASE_URL");
+    if (!key) missing.push("SUPABASE_SERVICE_ROLE_KEY");
+    // Use console.warn for very early logging
+    console.warn(`Supabase config missing: ${missing.join(", ")}`);
+    return null;
+  }
   return { url: url.replace(/\/+$/, ""), key, bucket };
 }
+
 
 function sanitizePathSegment(input: string) {
   return input.replace(/[^a-zA-Z0-9._-]/g, "-");

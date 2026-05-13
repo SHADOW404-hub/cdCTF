@@ -19,10 +19,11 @@ router.post("/ctf-file/sign", authenticateToken, requireAdmin, async (req, res) 
     return res.status(201).json(result);
   } catch (error) {
     if (error instanceof StorageUploadError) {
-      const status = error.status >= 400 && error.status < 500 ? error.status : 502;
+      const status = (error.status >= 400 && error.status < 500) || error.status === 501 ? error.status : 502;
       return res.status(status).json({ error: error.message || "Storage upload failed" });
     }
     return res.status(502).json({ error: "Storage upload failed" });
+
   }
 });
 

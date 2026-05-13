@@ -154,32 +154,56 @@ export default function AdminCtfPage() {
           size: file.size,
         }),
       });
-      const signed = await signResponse.json().catch(() => ({}));
-      if (!signResponse.ok) {
-        throw new Error(typeof signed?.error === "string" ? signed.error : t("Upload failed", "Yuklash muvaffaqiyatsiz", "Ошибка загрузки"));
+
+      if (signResponse.ok) {
+        const signed = await signResponse.json();
+        const uploadBody = new FormData();
+        // Standard Supabase signed upload expectation
+        uploadBody.append("", file);
+
+        const uploadResponse = await fetch(String(signed.signedUrl), {
+          method: "PUT",
+          body: uploadBody,
+        });
+
+        if (!uploadResponse.ok) {
+          const uploadError = await uploadResponse.text().catch(() => "");
+          throw new Error(uploadError || t("Upload failed", "Yuklash muvaffaqiyatsiz", "Ошибка загрузки"));
+        }
+
+        form.setValue("fileUrl", signed.publicUrl, { shouldDirty: true, shouldValidate: true });
+        toast({ title: t("File uploaded!", "Fayl yuklandi!", "Файл загружен!") });
+        return;
       }
 
-      const uploadBody = new FormData();
-      uploadBody.append("cacheControl", "3600");
-      uploadBody.append("", file);
+      // If signing failed, check if it's because Supabase is not configured
+      const signError = await signResponse.json().catch(() => ({}));
+      if (signResponse.status !== 501 && !String(signError?.error).includes("not configured")) {
+        throw new Error(typeof signError?.error === "string" ? signError.error : t("Upload failed", "Yuklash muvaffaqiyatsiz", "Ошибка загрузки"));
+      }
 
-      const uploadResponse = await fetch(String(signed.signedUrl), {
-        method: "PUT",
-        headers: { "x-upsert": "false" },
-        body: uploadBody,
+      // Fallback to direct multipart upload
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const directResponse = await fetch("/api/uploads/ctf-file", {
+        method: "POST",
+        body: formData,
       });
-      const uploadError = await uploadResponse.text().catch(() => "");
-      if (!uploadResponse.ok) {
-        throw new Error(uploadError || t("Upload failed", "Yuklash muvaffaqiyatsiz", "Ошибка загрузки"));
+
+      const directData = await directResponse.json().catch(() => ({}));
+      if (!directResponse.ok) {
+        throw new Error(typeof directData?.error === "string" ? directData.error : t("Upload failed", "Yuklash muvaffaqiyatsiz", "Ошибка загрузки"));
       }
 
-      form.setValue("fileUrl", signed.publicUrl, { shouldDirty: true, shouldValidate: true });
-      toast({ title: t("File uploaded!", "Fayl yuklandi!", "Файл загружен!") });
+      form.setValue("fileUrl", directData.fileUrl, { shouldDirty: true, shouldValidate: true });
+      toast({ title: t("File uploaded (local)!", "Fayl yuklandi (lokal)!", "Файл загружен (локально)!") });
     } catch (error) {
       toast({ title: error instanceof Error ? error.message : t("Upload failed", "Yuklash muvaffaqiyatsiz", "Ошибка загрузки"), variant: "destructive" });
     } finally {
       setUploadingFile(false);
     }
+
   };
 
   return (

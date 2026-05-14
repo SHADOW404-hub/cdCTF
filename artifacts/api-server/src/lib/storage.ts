@@ -20,11 +20,12 @@ function getSupabaseConfig() {
   const bucket = process.env.SUPABASE_STORAGE_BUCKET || "cdctf";
   
   if (!url || !key) {
-    const missing = [];
-    if (!url) missing.push("SUPABASE_URL");
-    if (!key) missing.push("SUPABASE_SERVICE_ROLE_KEY");
-    // Use console.warn for very early logging
-    console.warn(`Supabase config missing: ${missing.join(", ")}`);
+    const isVercel = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
+    if (isVercel) {
+      console.error("CRITICAL: Supabase Storage is NOT configured in Vercel environment! Uploads will be temporary and stored in /tmp. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.");
+    } else {
+      console.warn("Supabase Storage is not configured. Falling back to local filesystem storage.");
+    }
     return null;
   }
   return { url: url.replace(/\/+$/, ""), key, bucket };
@@ -40,39 +41,20 @@ export function getLocalUploadsRoot() {
     return path.resolve(process.env.LOCAL_UPLOAD_DIR);
   }
 
+  // Vercel execution environment is read-only except for /tmp
+  if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+    return path.resolve("/tmp", "uploads");
+  }
+
   // Try common locations relative to process.cwd()
   const cwd = process.cwd();
-  const candidates = [
-    path.join(cwd, "uploads"),
-    path.join(cwd, "..", "..", "uploads"),
-    path.join(cwd, "..", "uploads"),
-  ];
-
-  for (const candidate of candidates) {
-    try {
-      // We don't check existence here because we might want to create it,
-      // but we prefer one that already exists.
-      // However, if we are in the root, path.join(cwd, "uploads") is likely correct.
-      // If we are in artifacts/api-server, path.join(cwd, "..", "..", "uploads") is likely correct.
-      
-      // Let's use a more robust detection: look for package.json or pnpm-workspace.yaml
-      // to identify the root.
-    } catch (e) {}
+  
+  // If we are in artifacts/api-server, go up to find the root uploads
+  if (cwd.includes("artifacts/api-server")) {
+    return path.resolve(cwd, "..", "..", "uploads");
   }
 
-  // Default fallback that is safer than going up too far
-  // If we are in a subdirectory, we try to go up until we find 'uploads' or hit root.
-  let current = cwd;
-  while (current !== path.dirname(current)) {
-    const check = path.join(current, "uploads");
-    // If uploads exists in this directory, use it
-    if (path.basename(current) === "api-server" && path.basename(path.dirname(current)) === "artifacts") {
-        return path.resolve(current, "..", "..", "uploads");
-    }
-    current = path.dirname(current);
-  }
-
-  // If all else fails, just use 'uploads' in the current directory
+  // Default fallback: just use 'uploads' in the current directory
   return path.resolve(cwd, "uploads");
 }
 

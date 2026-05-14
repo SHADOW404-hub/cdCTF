@@ -135,8 +135,8 @@ router.get("/me/profile", authenticateToken, async (req, res) => {
   }
 });
 
-// GET /api/users/:id/profile
-router.get("/:id/profile", optionalAuth, async (req, res) => {
+// GET /api/users/:id
+router.get("/:id", optionalAuth, async (req, res) => {
   try {
     const id = Number(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "Invalid ID" });

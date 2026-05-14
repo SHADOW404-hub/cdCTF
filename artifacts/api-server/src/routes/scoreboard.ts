@@ -1,16 +1,34 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { usersTable, ctfAttemptsTable, userLessonAttemptsTable, userTitlesTable, titlesTable } from "@workspace/db/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, like, or, sql } from "drizzle-orm";
 import { optionalAuth } from "../middleware/auth";
 
 const router = Router();
 
 router.get("/", optionalAuth, async (req, res) => {
-  const limit = Math.min(Number(req.query.limit) || 50, 200);
+  const page = Math.max(Number(req.query.page) || 1, 1);
+  const limit = Math.min(Number(req.query.limit) || 25, 100);
+  const search = typeof req.query.search === "string" ? req.query.search.trim() : "";
   const currentUserId = req.user?.userId;
 
-  const users = await db.select().from(usersTable).where(and(eq(usersTable.isBlocked, false), eq(usersTable.role, "user")));
+  let query = db.select().from(usersTable).where(
+    and(
+      eq(usersTable.isBlocked, false),
+      eq(usersTable.role, "user"),
+      search ? or(
+        like(usersTable.nickname, `%${search}%`),
+        like(usersTable.email, `%${search}%`)
+      ) : undefined
+    )
+  );
+
+  const allFilteredUsers = await query;
+  const total = allFilteredUsers.length;
+  
+  const users = allFilteredUsers
+    .sort((a, b) => b.points - a.points)
+    .slice((page - 1) * limit, page * limit);
 
   const allCtfSolves = await db.select().from(ctfAttemptsTable).where(eq(ctfAttemptsTable.solved, true));
   const allLessonCompletes = await db.select().from(userLessonAttemptsTable).where(eq(userLessonAttemptsTable.status, "completed"));
@@ -31,28 +49,33 @@ router.get("/", optionalAuth, async (req, res) => {
     if (t.titleName) titlesMap.get(t.userId)!.push(t.titleName);
   }
 
-  const entries = users
-    .sort((a, b) => b.points - a.points)
-    .slice(0, limit)
-    .map((u, i) => ({
-      rank: i + 1,
-      userId: u.id,
-      nickname: u.nickname,
-      avatarUrl: u.avatarUrl,
-      points: u.points,
-      solvedCtfCount: solvesMap.get(u.id) ?? 0,
-      completedLessonsCount: lessonsMap.get(u.id) ?? 0,
-      titles: titlesMap.get(u.id) ?? [],
-    }));
+  const entries = users.map((u, i) => ({
+    rank: (page - 1) * limit + i + 1,
+    userId: u.id,
+    nickname: u.nickname,
+    avatarUrl: u.avatarUrl,
+    points: u.points,
+    solvedCtfCount: solvesMap.get(u.id) ?? 0,
+    completedLessonsCount: lessonsMap.get(u.id) ?? 0,
+    titles: titlesMap.get(u.id) ?? [],
+  }));
 
   let currentUserRank: number | undefined;
   if (currentUserId) {
-    const allSorted = users.sort((a, b) => b.points - a.points);
+    const allSorted = (await db.select().from(usersTable).where(and(eq(usersTable.isBlocked, false), eq(usersTable.role, "user"))))
+      .sort((a, b) => b.points - a.points);
     const idx = allSorted.findIndex(u => u.id === currentUserId);
     if (idx !== -1) currentUserRank = idx + 1;
   }
 
-  res.json({ entries, total: users.length, currentUserRank });
+  res.json({ 
+    entries, 
+    total, 
+    currentUserRank,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit)
+  });
 });
 
 export default router;

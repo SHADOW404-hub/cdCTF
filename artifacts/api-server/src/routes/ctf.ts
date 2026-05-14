@@ -13,6 +13,8 @@ const flagRateLimit = createRateLimiter({ windowMs: 1 * 60 * 1000, max: 10, keyP
 // GET /api/ctf
 router.get("/", optionalAuth, async (req, res) => {
   const { category, difficulty, search, solved } = req.query as Record<string, string>;
+  const page = Math.max(Number(req.query.page) || 1, 1);
+  const limit = Math.min(Number(req.query.limit) || 25, 100);
   const userId = req.user?.userId;
 
   let challenges = await db.select().from(ctfTasksTable);
@@ -58,7 +60,16 @@ router.get("/", optionalAuth, async (req, res) => {
     ch.solvedCount = solveMap.get(ch.id) ?? 0;
   });
 
-  res.json({ challenges: result });
+  const total = result.length;
+  const paginatedResult = result.slice((page - 1) * limit, page * limit);
+
+  res.json({ 
+    challenges: paginatedResult, 
+    total,
+    page,
+    limit,
+    totalPages: Math.ceil(total / limit)
+  });
 });
 
 // GET /api/ctf/:id

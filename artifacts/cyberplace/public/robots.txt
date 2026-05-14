@@ -1,9 +1,13 @@
 User-agent: *
 Allow: /
 
-Disallow: /admin
-Disallow: /dashboard
-Disallow: /profile/edit
-Disallow: /verify-email
-
+# Sitemap location
 Sitemap: https://cyberplace.uz/sitemap.xml
+
+# Restricted areas
+Disallow: /admin/
+Disallow: /profile/edit/
+Disallow: /dashboard/
+Disallow: /verify-email/
+Disallow: /login
+Disallow: /register

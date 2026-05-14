@@ -16,295 +16,191 @@ interface SeoConfig {
   robots?: string;
   type?: "website" | "profile";
   keywords?: LocalizedText;
-  structuredData?: unknown;
+  structuredData?: unknown[];
 }
 
 const text = (en: string, uz: string, ru: string): LocalizedText => ({ en, uz, ru });
+
+const getBreadcrumbs = (items: { name: LocalizedText; item: string }[]) => ({
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": items.map((it, i) => ({
+    "@type": "ListItem",
+    "position": i + 1,
+    "name": it.name.en, // Schema uses primary language name usually
+    "item": `${SITE_URL}${it.item}`
+  }))
+});
 
 const publicRoutes: Array<{ match: (path: string) => boolean; config: SeoConfig }> = [
   {
     match: (path) => path === "/",
     config: {
       title: text(
-        "CTF Platform and Cybersecurity Training",
-        "CTF Platforma va Kiberxavfsizlik Kurslari",
-        "Платформа CTF по кибербезопасности",
+        "cdCTF | Best CTF Platform and Cybersecurity Training in Uzbekistan",
+        "cdCTF | O'zbekistondagi eng yaxshi CTF platformasi va kiberxavfsizlik kurslari",
+        "cdCTF | Лучшая платформа CTF и обучение кибербезопасности в Узбекистане"
       ),
       description: text(
-        "cdCTF is a CTF site and cybersecurity platform for learning ethical hacking, web security, OSINT, cryptography, forensics and competing in CTF challenges.",
-        "cdCTF - CTF site, CTF platforma va kiberxavfsizlik kurslari maskani. Ethical hacking, web security, OSINT, kriptografiya, forensics va CTF topshiriqlarini o'rganing.",
-        "Изучайте кибербезопасность на cdCTF через CTF-задания, уроки, соревнования и рейтинг.",
+        "cdCTF is a premier cybersecurity platform offering hands-on CTF challenges, ethical hacking courses, and real-world security training. Learn Web Security, OSINT, Cryptography and Forensics.",
+        "cdCTF - O'zbekistondagi kiberxavfsizlik platformasi. Web Security, OSINT, Kriptografiya va Forensics bo'yicha amaliy CTF topshiriqlari va professional kurslarni o'rganing.",
+        "cdCTF - ведущая платформа по кибербезопасности в Узбекистане. Изучайте веб-безопасность, OSINT, криптографию и форензику через практические CTF задания и курсы."
       ),
       keywords: text(
-        "ctf site, ctf platform, cybersecurity platform, learn cybersecurity, cybersecurity training, ethical hacking, web security, ctf challenges, cyber security course, OSINT, forensics, cryptography",
-        "ctf site, ctf platforma, kiberxavfsizlik platformasi, kiberxavfsizlik kurslari, cybersecurity o'rganish, ethical hacking, web hacking, CTF O'zbekiston, OSINT, forensics, kriptografiya",
-        "ctf platform, cybersecurity platform, ethical hacking, web security, OSINT, forensics, cryptography",
+        "ctf uzbekistan, cyber security training uzbekistan, learn hacking uzbekistan, ethical hacking uzbekistan, ctf challenges web, osint labs, crypto challenges, digital forensics training",
+        "ctf uzbekistan, kiberxavfsizlik o'rganish, hacking darslari, kiberxavfsizlik kurslari, web xavfsizlik, osint o'zbek tilida, kriptografiya darslari, forensics topshiriqlari",
+        "ctf узбекистан, обучение кибербезопасности, курсы хакинга, этичный хакинг, веб-безопасность, осинт, криптография, форензика"
       ),
       structuredData: [
         {
           "@context": "https://schema.org",
           "@type": "EducationalOrganization",
-          name: "cdCTF",
-          alternateName: ["cdCTF Platform", "cdCTF"],
-          url: SITE_URL,
-          logo: DEFAULT_IMAGE,
-          sameAs: ["https://t.me/cdctf_uz", "https://instagram.com/cyberplace"],
-          description:
-            "CTF site and cybersecurity learning platform for ethical hacking, web security, OSINT, cryptography, forensics and CTF competitions.",
-          knowsAbout: [
-            "CTF challenges",
-            "cybersecurity training",
-            "ethical hacking",
-            "web security",
-            "OSINT",
-            "cryptography",
-            "digital forensics",
-            "reverse engineering",
-            "binary exploitation",
-          ],
+          "name": "cdCTF",
+          "alternateName": ["cdCTF Platform", "cdCTF Uzbekistan"],
+          "url": SITE_URL,
+          "logo": DEFAULT_IMAGE,
+          "sameAs": ["https://t.me/cdctf_uz", "https://instagram.com/cyberplace"],
+          "description": "Leading CTF platform and cybersecurity academy in Uzbekistan focusing on hands-on technical skills.",
+          "knowsAbout": ["Web Security", "OSINT", "Cryptography", "Digital Forensics", "Reverse Engineering", "Pwn"]
         },
         {
           "@context": "https://schema.org",
           "@type": "WebSite",
-          name: "cdCTF",
-          alternateName: "cdCTF Platform",
-          url: SITE_URL,
-          inLanguage: ["uz", "en", "ru"],
-          description:
-            "A CTF platform for learning cybersecurity with lessons, hands-on challenges, competitions and scoreboard.",
-          potentialAction: {
+          "name": "cdCTF",
+          "url": SITE_URL,
+          "potentialAction": {
             "@type": "SearchAction",
-            target: `${SITE_URL}/ctf?search={search_term_string}`,
-            "query-input": "required name=search_term_string",
-          },
-        },
-        {
-          "@context": "https://schema.org",
-          "@type": "Course",
-          name: "Cybersecurity and CTF Training",
-          alternateName: "Kiberxavfsizlik va CTF kurslari",
-          description:
-            "Learn cybersecurity through structured lessons and practical CTF challenges in web security, OSINT, cryptography and forensics.",
-          provider: {
-            "@type": "Organization",
-            name: "cdCTF",
-            sameAs: SITE_URL,
-          },
-        },
-      ],
-    },
+            "target": `${SITE_URL}/ctf?search={search_term_string}`,
+            "query-input": "required name=search_term_string"
+          }
+        }
+      ]
+    }
   },
   {
     match: (path) => path === "/ctf",
     config: {
-      title: text("CTF Challenges and Hacking Labs", "CTF Topshiriqlari va Hacking Lablar", "CTF Задания"),
+      title: text("CTF Missions & Cybersecurity Labs | cdCTF", "CTF Topshiriqlari va Hacking Lablar | cdCTF", "CTF Миссии и Лаборатории | cdCTF"),
       description: text(
-        "Practice CTF challenges and hacking labs in Web, Crypto, Reverse, Forensics, Pwn, OSINT and other cybersecurity categories.",
-        "Web, Crypto, Reverse, Forensics, Pwn, OSINT va boshqa yo'nalishlarda CTF topshiriqlari va hacking lablarni yeching.",
-        "Практикуйтесь в Web, Crypto, Reverse, Forensics, Pwn, OSINT и других CTF-заданиях на cdCTF.",
+        "Access 100+ CTF challenges across Web, Crypto, Reverse, and Forensics. Level up your hacking skills with our mission control.",
+        "Web, Crypto, Reverse va Forensics bo'yicha 100+ CTF topshiriqlarini yeching. Mission control orqali hacking mahoratingizni oshiring.",
+        "Доступ к 100+ CTF заданиям по веб-безопасности, криптографии, реверс-инжинирингу и форензике."
       ),
       keywords: text(
-        "ctf challenges, hacking labs, web hacking challenges, osint ctf, crypto ctf, forensics ctf, reverse engineering ctf, pwn ctf",
-        "ctf topshiriqlari, hacking lablar, web hacking topshiriqlari, osint ctf, crypto ctf, forensics ctf, reverse engineering ctf, pwn ctf",
-        "ctf challenges, hacking labs, osint ctf, crypto ctf, forensics ctf",
+        "ctf labs, hacking missions, web vulnerability labs, cryptographic puzzles, reverse engineering challenges, pwnable labs",
+        "ctf lablar, hacking topshiriqlari, web zaifliklar, kriptografik jumboqlar, reverse engineering, pwn topshiriqlari",
+        "ctf лаборатории, хакинг миссии, веб уязвимости, криптографические задачи, реверс инжиниринг"
       ),
-    },
-  },
-  {
-    match: (path) => path.startsWith("/ctf/"),
-    config: {
-      title: text("CTF Challenge", "CTF Topshirig'i", "CTF Задание"),
-      description: text(
-        "Open a cybersecurity challenge, submit a flag, and earn points on cdCTF.",
-        "Kiberxavfsizlik topshirig'ini oching, flag yuboring va cdCTFda ball to'plang.",
-        "Откройте CTF-задание, отправьте flag и получите очки на cdCTF.",
-      ),
-    },
+      structuredData: [
+        getBreadcrumbs([
+          { name: text("Home", "Bosh sahifa", "Главная"), item: "/" },
+          { name: text("CTF", "CTF", "CTF"), item: "/ctf" }
+        ])
+      ]
+    }
   },
   {
     match: (path) => path === "/learn",
     config: {
-      title: text("Learn Cybersecurity and Ethical Hacking", "Kiberxavfsizlik va Ethical Hacking Darslari", "Уроки по кибербезопасности"),
+      title: text("Cybersecurity Academy & Courses | cdCTF", "Kiberxavfsizlik Akademiyasi va Kurslar | cdCTF", "Академия Кибербезопасности и Курсы | cdCTF"),
       description: text(
-        "Learn cybersecurity, ethical hacking, web security, OSINT, cryptography and forensics with structured lessons and practical tests.",
-        "Kiberxavfsizlik, ethical hacking, web security, OSINT, kriptografiya va forensics bo'yicha tizimli darslar va amaliy testlar.",
-        "Изучайте структурированные уроки по кибербезопасности с тестами и отслеживанием прогресса.",
+        "Learn ethical hacking with structured courses. Zero to hero paths in OSINT, Web Security, and Cryptography.",
+        "Tizimli kurslar orqali ethical hackingni o'rganing. OSINT, Web Security va Kriptografiya bo'yicha noldan professionalgacha.",
+        "Изучайте этичный хакинг через структурированные курсы. Путь от новичка до профи в OSINT, веб-безопасности и криптографии."
       ),
-      keywords: text(
-        "learn cybersecurity, cybersecurity lessons, cybersecurity training, ethical hacking course, web security course, cyber security course, OSINT training",
-        "kiberxavfsizlik darslari, kiberxavfsizlik kurslari, cybersecurity o'rganish, ethical hacking kursi, web security kursi, OSINT darslari",
-        "cybersecurity lessons, ethical hacking course, web security course",
-      ),
-    },
-  },
-  {
-    match: (path) => path.startsWith("/learn/") && !path.endsWith("/test"),
-    config: {
-      title: text("Cybersecurity Lesson", "Kiberxavfsizlik Darsi", "Урок кибербезопасности"),
-      description: text(
-        "Read a cybersecurity lesson, complete practice material, and prepare for tests on cdCTF.",
-        "Kiberxavfsizlik darsini o'qing, amaliy materiallarni bajaring va cdCTF testlariga tayyorlaning.",
-        "Читайте урок, выполняйте практику и готовьтесь к тестам на cdCTF.",
-      ),
-    },
+      structuredData: [
+        getBreadcrumbs([
+          { name: text("Home", "Bosh sahifa", "Главная"), item: "/" },
+          { name: text("Learn", "O'rganish", "Учиться"), item: "/learn" }
+        ])
+      ]
+    }
   },
   {
     match: (path) => path === "/scoreboard",
     config: {
-      title: text("Scoreboard", "Reyting", "Рейтинг"),
+      title: text("Global Leaderboard & Rankings | cdCTF", "Global Reyting va Top O'yinchilar | cdCTF", "Глобальный Рейтинг и Топ Игроков | cdCTF"),
       description: text(
-        "See cdCTF rankings, top players, solved challenges, titles, and points.",
-        "cdCTF reytingi, eng yaxshi o'yinchilar, yechilgan topshiriqlar, unvonlar va ballarni ko'ring.",
-        "Смотрите рейтинг cdCTF, лучших игроков, решённые задания, титулы и очки.",
+        "Track your progress against the best hackers in Uzbekistan. See the global cdCTF scoreboard and earned titles.",
+        "O'zbekistondagi eng kuchli hackerlar bilan bellashing. Global cdCTF reytingi va unvonlarni ko'ring.",
+        "Следите за своим прогрессом среди лучших хакеров Узбекистана. Глобальный рейтинг cdCTF и полученные титулы."
       ),
-    },
-  },
-  {
-    match: (path) => path === "/competitions",
-    config: {
-      title: text("Cybersecurity Competitions", "Kiberxavfsizlik Musobaqalari", "Соревнования по кибербезопасности"),
-      description: text(
-        "Join online CTF competitions, cybersecurity contests and timed hacking challenges to earn points, titles and certificates.",
-        "Online CTF musobaqalari, kiberxavfsizlik contestlari va vaqtli hacking topshiriqlarida qatnashing.",
-        "Участвуйте в публичных и приватных CTF-соревнованиях, решайте задания на время и получайте сертификаты.",
-      ),
-      keywords: text(
-        "ctf competition, cybersecurity competition, online ctf, hacking competition, cyber contest",
-        "ctf musobaqa, kiberxavfsizlik musobaqasi, online ctf, hacking musobaqa, cyber contest",
-        "ctf competition, cybersecurity competition, online ctf",
-      ),
-    },
-  },
-  {
-    match: (path) => path.startsWith("/competitions/"),
-    config: {
-      title: text("CTF Competition", "CTF Musobaqasi", "CTF Соревнование"),
-      description: text(
-        "View competition details, participants, rules, and CTF challenges on cdCTF.",
-        "cdCTF musobaqasi tafsilotlari, qatnashchilar, qoidalar va CTF topshiriqlarini ko'ring.",
-        "Смотрите детали соревнования, участников, правила и CTF-задания на cdCTF.",
-      ),
-    },
-  },
-  {
-    match: (path) => path.startsWith("/profile/"),
-    config: {
-      title: text("Player Profile", "O'yinchi Profili", "Профиль игрока"),
-      description: text(
-        "View a cdCTF player profile, solved challenges, titles, points, and competition activity.",
-        "cdCTF o'yinchisi profili, yechilgan topshiriqlar, unvonlar, ballar va musobaqa faolligini ko'ring.",
-        "Смотрите профиль игрока cdCTF, решённые задания, титулы, очки и активность.",
-      ),
-      type: "profile",
-    },
-  },
+      structuredData: [
+        getBreadcrumbs([
+          { name: text("Home", "Bosh sahifa", "Главная"), item: "/" },
+          { name: text("Scoreboard", "Reyting", "Рейтинг"), item: "/scoreboard" }
+        ])
+      ]
+    }
+  }
 ];
 
 const privateOrUtilityRoutes: Array<{ match: (path: string) => boolean; config: SeoConfig }> = [
   {
     match: (path) => ["/login", "/register", "/verify-email", "/dashboard", "/profile/edit"].includes(path),
     config: {
-      title: text("Account", "Hisob", "Аккаунт"),
-      description: text(
-        "Access your cdCTF account.",
-        "cdCTF hisobingizga kiring.",
-        "Войдите в аккаунт cdCTF.",
-      ),
-      robots: "noindex, nofollow",
-    },
+      title: text("Authentication | cdCTF", "Hisobga kirish | cdCTF", "Аутентификация | cdCTF"),
+      description: text("Manage your cdCTF account and track your progress.", "cdCTF hisobingizni boshqaring va natijalaringizni ko'ring.", "Управляйте своим аккаунтом cdCTF."),
+      robots: "noindex, nofollow"
+    }
   },
   {
     match: (path) => path.startsWith("/admin"),
     config: {
-      title: text("Admin Panel", "Admin Panel", "Админ-панель"),
-      description: text("cdCTF admin panel.", "cdCTF admin paneli.", "Админ-панель cdCTF."),
-      robots: "noindex, nofollow",
-    },
-  },
-  {
-    match: (path) => path.endsWith("/test") || (path.startsWith("/competitions/") && path.includes("/ctf/")),
-    config: {
-      title: text("Practice", "Amaliyot", "Практика"),
-      description: text(
-        "Practice cybersecurity tasks on cdCTF.",
-        "cdCTFda kiberxavfsizlik amaliyotini bajaring.",
-        "Практикуйтесь в заданиях по кибербезопасности на cdCTF.",
-      ),
-      robots: "noindex, nofollow",
-    },
-  },
+      title: text("Admin Control Center | cdCTF", "Admin Paneli | cdCTF", "Админ Панель | cdCTF"),
+      description: text("Restricted administrative area.", "Faqat adminlar uchun.", "Ограниченная зона для администраторов."),
+      robots: "noindex, nofollow"
+    }
+  }
 ];
 
 function findConfig(path: string): SeoConfig {
   return (
     privateOrUtilityRoutes.find((route) => route.match(path))?.config ??
     publicRoutes.find((route) => route.match(path))?.config ?? {
-      title: text("Page Not Found", "Sahifa Topilmadi", "Страница не найдена"),
-      description: text(
-        "The requested cdCTF page could not be found.",
-        "So'ralgan cdCTF sahifasi topilmadi.",
-        "Запрошенная страница cdCTF не найдена.",
-      ),
-      robots: "noindex, nofollow",
+      title: text("404 - Terminal Error | cdCTF", "404 - Sahifa Topilmadi | cdCTF", "404 - Ошибка | cdCTF"),
+      description: text("The requested data packet could not be located.", "So'ralgan sahifa topilmadi.", "Запрошенная страница не найдена."),
+      robots: "noindex, nofollow"
     }
   );
 }
 
 function upsertMeta(selector: string, attrs: Record<string, string>) {
   let element = document.head.querySelector<HTMLMetaElement>(selector);
-
   if (!element) {
     element = document.createElement("meta");
     document.head.appendChild(element);
   }
-
   Object.entries(attrs).forEach(([key, value]) => {
     element?.setAttribute(key, value);
   });
 }
 
-function upsertLink(rel: string, href: string) {
-  let element = document.head.querySelector<HTMLLinkElement>(`link[rel="${rel}"]`);
-
+function upsertLink(rel: string, href: string, otherAttrs: Record<string, string> = {}) {
+  let element = document.head.querySelector<HTMLLinkElement>(`link[rel="${rel}"]${Object.entries(otherAttrs).map(([k, v]) => `[${k}="${v}"]`).join("")}`);
   if (!element) {
     element = document.createElement("link");
     element.setAttribute("rel", rel);
+    Object.entries(otherAttrs).forEach(([k, v]) => element?.setAttribute(k, v));
     document.head.appendChild(element);
   }
-
   element.setAttribute("href", href);
 }
 
-function upsertAlternate(lang: string, href: string) {
-  let element = document.head.querySelector<HTMLLinkElement>(`link[rel="alternate"][hreflang="${lang}"]`);
-
-  if (!element) {
-    element = document.createElement("link");
-    element.setAttribute("rel", "alternate");
-    element.setAttribute("hreflang", lang);
-    document.head.appendChild(element);
-  }
-
-  element.setAttribute("href", href);
-}
-
-function upsertStructuredData(data?: unknown) {
+function upsertStructuredData(dataArray?: unknown[]) {
   const id = "structured-data";
-  let element = document.getElementById(id) as HTMLScriptElement | null;
+  const existing = document.querySelectorAll(`.${id}`);
+  existing.forEach(el => el.remove());
 
-  if (!data) {
-    element?.remove();
-    return;
-  }
+  if (!dataArray || dataArray.length === 0) return;
 
-  if (!element) {
-    element = document.createElement("script");
-    element.id = id;
-    element.type = "application/ld+json";
-    document.head.appendChild(element);
-  }
-
-  element.textContent = JSON.stringify(data);
+  dataArray.forEach((data, index) => {
+    const script = document.createElement("script");
+    script.className = id;
+    script.type = "application/ld+json";
+    script.textContent = JSON.stringify(data);
+    document.head.appendChild(script);
+  });
 }
 
 export function SeoManager() {
@@ -314,8 +210,8 @@ export function SeoManager() {
   useEffect(() => {
     const config = findConfig(location);
     const canonicalPath = config.path ?? location;
-    const canonical = `${SITE_URL}${canonicalPath === "/" ? "/" : canonicalPath}`;
-    const pageTitle = `${config.title[lang]} | ${SITE_NAME}`;
+    const canonical = `${SITE_URL}${canonicalPath === "/" ? "" : canonicalPath}`;
+    const pageTitle = config.title[lang];
     const description = config.description[lang];
     const image = config.image ?? DEFAULT_IMAGE;
     const robots = config.robots ?? "index, follow";
@@ -325,25 +221,32 @@ export function SeoManager() {
     document.title = pageTitle;
 
     upsertMeta('meta[name="description"]', { name: "description", content: description });
-    if (keywords) {
-      upsertMeta('meta[name="keywords"]', { name: "keywords", content: keywords });
-    }
+    if (keywords) upsertMeta('meta[name="keywords"]', { name: "keywords", content: keywords });
     upsertMeta('meta[name="robots"]', { name: "robots", content: robots });
+    
+    // OG
+    upsertMeta('meta[property="og:site_name"]', { property: "og:site_name", content: SITE_NAME });
     upsertMeta('meta[property="og:locale"]', { property: "og:locale", content: lang === "uz" ? "uz_UZ" : lang === "ru" ? "ru_RU" : "en_US" });
-    upsertMeta('meta[property="og:locale:alternate"]', { property: "og:locale:alternate", content: lang === "uz" ? "en_US" : "uz_UZ" });
     upsertMeta('meta[property="og:title"]', { property: "og:title", content: pageTitle });
     upsertMeta('meta[property="og:description"]', { property: "og:description", content: description });
     upsertMeta('meta[property="og:url"]', { property: "og:url", content: canonical });
     upsertMeta('meta[property="og:type"]', { property: "og:type", content: config.type ?? "website" });
     upsertMeta('meta[property="og:image"]', { property: "og:image", content: image });
+    
+    // Twitter
+    upsertMeta('meta[name="twitter:card"]', { name: "twitter:card", content: "summary_large_image" });
     upsertMeta('meta[name="twitter:title"]', { name: "twitter:title", content: pageTitle });
     upsertMeta('meta[name="twitter:description"]', { name: "twitter:description", content: description });
     upsertMeta('meta[name="twitter:image"]', { name: "twitter:image", content: image });
+
+    // Links
     upsertLink("canonical", canonical);
-    upsertAlternate("uz", canonical);
-    upsertAlternate("en", canonical);
-    upsertAlternate("x-default", canonical);
-    upsertStructuredData(config.structuredData);
+    upsertLink("alternate", canonical, { hreflang: "x-default" });
+    upsertLink("alternate", canonical, { hreflang: "uz" });
+    upsertLink("alternate", canonical, { hreflang: "ru" });
+    upsertLink("alternate", canonical, { hreflang: "en" });
+
+    upsertStructuredData(config.structuredData as unknown[]);
   }, [lang, location]);
 
   return null;

@@ -71,6 +71,9 @@ function Router() {
         <Route path="/profile/edit">
           {() => <ProtectedRoute component={ProfileEditPage} />}
         </Route>
+        <Route path="/profile">
+          {() => <ProtectedRoute component={ProfilePage} />}
+        </Route>
         <Route path="/profile/:id" component={ProfilePage} />
         <Route path="/admin/dashboard">
           {() => <AdminRoute component={AdminDashboardPage} />}

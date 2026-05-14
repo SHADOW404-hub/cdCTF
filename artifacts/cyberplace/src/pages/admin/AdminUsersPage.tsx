@@ -111,7 +111,11 @@ export default function AdminUsersPage() {
                 {users.map((user, idx) => (
                   <tr key={user.id} className="hover:bg-muted/20 transition-colors" data-testid={`row-user-${user.id}`}>
                     <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{idx + 1}</td>
-                    <td className="px-4 py-3 font-medium">{user.nickname}</td>
+                    <td className="px-4 py-3 font-medium">
+                      <Link href={`/profile/${user.id}`} className="hover:text-primary transition-colors">
+                        {user.nickname}
+                      </Link>
+                    </td>
                     <td className="px-4 py-3 text-muted-foreground text-xs">{user.email}</td>
                     <td className="px-4 py-3 font-mono text-primary font-bold">{user.points}</td>
                     <td className="px-4 py-3">

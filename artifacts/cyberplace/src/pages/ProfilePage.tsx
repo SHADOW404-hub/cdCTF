@@ -9,9 +9,9 @@ import { normalizeArray } from "@/lib/api-shapes";
 
 export default function ProfilePage() {
   const [, params] = useRoute("/profile/:id");
-  const id = Number(params?.id);
   const { t } = useLang();
   const { user: currentUser } = useAuth();
+  const id = params?.id ? Number(params.id) : currentUser?.id;
 
   const { data: profile, isLoading } = useGetUserProfile(id, {
     query: { enabled: !!id, queryKey: getGetUserProfileQueryKey(id) },

@@ -68,7 +68,7 @@ export function Navbar() {
             )}
             {isAuthenticated && user && (
               <Link
-                href={`/profile/${user.id}`}
+                href="/profile"
                 className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
                   isActive("/profile")
                     ? "bg-primary/10 text-primary"
@@ -126,7 +126,7 @@ export function Navbar() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href={`/profile/${user.id}`} className="flex items-center gap-2">
+                    <Link href="/profile" className="flex items-center gap-2">
                       <User className="w-4 h-4" /> {t("Profile", "Profil", "Профиль")}
                     </Link>
                   </DropdownMenuItem>

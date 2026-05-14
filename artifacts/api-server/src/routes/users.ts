@@ -61,6 +61,11 @@ router.get("/me/dashboard", authenticateToken, async (req, res) => {
   });
 });
 
+// GET /api/users/me/profile
+router.get("/me/profile", authenticateToken, async (req, res) => {
+  res.redirect(`/api/users/${req.user!.userId}/profile`);
+});
+
 // GET /api/users/:id/profile
 router.get("/:id/profile", optionalAuth, async (req, res) => {
   const id = Number(req.params.id);

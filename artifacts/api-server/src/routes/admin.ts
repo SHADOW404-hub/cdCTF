@@ -108,6 +108,35 @@ router.post("/users/:id/unblock", async (req, res) => {
   res.json({ success: true, message: "User unblocked" });
 });
 
+// POST /api/admin/users/recalculate-points
+router.post("/users/recalculate-points", async (req, res) => {
+  try {
+    await db.execute(sql`
+      UPDATE users 
+      SET points = (
+        COALESCE((
+          SELECT SUM(t.points) 
+          FROM ctf_attempts a 
+          JOIN ctf_tasks t ON a.ctf_id = t.id 
+          WHERE a.user_id = users.id AND a.solved = true
+        ), 0) + 
+        COALESCE((
+          SELECT SUM(l.points) 
+          FROM user_lesson_attempts la 
+          JOIN lessons l ON la.lesson_id = l.id 
+          WHERE la.user_id = users.id AND la.status = 'completed'
+        ), 0)
+      )
+    `);
+    
+    await writeAuditLog(req, "users.recalculate_points", "system", 0);
+    res.json({ success: true, message: "All user points have been recalculated based on current data" });
+  } catch (error) {
+    logger.error({ err: error }, "Error recalculating user points");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // POST /api/admin/ctf
 router.post("/ctf", async (req, res) => {
   const { name, nameUz, nameRu, description, descriptionUz, descriptionRu, category, difficulty, points, hint, flag, fileUrl } = req.body;

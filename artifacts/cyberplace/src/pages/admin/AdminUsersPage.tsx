@@ -40,12 +40,47 @@ export default function AdminUsersPage() {
     });
   };
 
+  const [isRecalculating, setIsRecalculating] = useState(false);
+  const handleRecalculate = async () => {
+    if (!confirm(t("Recalculate all user points? This will sync points with current solve data.", "Barcha ballarni qayta hisoblash? Bu ballarni joriy ma'lumotlar bilan sinxronlashtiradi.", "Пересчитать все баллы? Это синхронизирует баллы с текущими данными."))) return;
+    
+    setIsRecalculating(true);
+    try {
+      const res = await fetch("/api/admin/users/recalculate-points", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${localStorage.getItem("token")}`
+        }
+      });
+      if (!res.ok) throw new Error();
+      toast({ title: t("Points recalculated", "Ballar qayta hisoblandi", "Баллы пересчитаны") });
+      qc.invalidateQueries({ queryKey: getAdminListUsersQueryKey({}) });
+    } catch (err) {
+      toast({ title: t("Error", "Xato", "Ошибка"), variant: "destructive" });
+    } finally {
+      setIsRecalculating(false);
+    }
+  };
+
   return (
     <div className="flex min-h-screen bg-background pt-14">
       <AdminSidebar />
       <main className="flex-1 p-6">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-xl font-bold">{t("Users", "Foydalanuvchilar", "Пользователи")}</h1>
+          <div className="flex items-center gap-4">
+            <h1 className="text-xl font-bold">{t("Users", "Foydalanuvchilar", "Пользователи")}</h1>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={handleRecalculate} 
+              disabled={isRecalculating}
+              className="text-xs h-8"
+              data-testid="button-recalculate-points"
+            >
+              {isRecalculating ? t("Recalculating...", "Hisoblanmoqda...", "Пересчет...") : t("Recalculate Points", "Ballarni qayta hisoblash", "Пересчитать баллы")}
+            </Button>
+          </div>
           <span className="text-sm text-muted-foreground">{data ? `${total} ${t("total", "jami", "всего")}` : ""}</span>
         </div>
 

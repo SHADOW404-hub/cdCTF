@@ -43,6 +43,32 @@ app.use(express.json({ limit: REQUEST_BODY_LIMIT }));
 app.use(express.urlencoded({ extended: true, limit: REQUEST_BODY_LIMIT }));
 app.use("/uploads", express.static(getLocalUploadsRoot()));
 
+// Fallback for missing files in /uploads/ - try to find them in the database
+app.get("/uploads/ctf/:filename", async (req, res, next) => {
+  try {
+    const filenameWithUuid = req.params.filename;
+    // The old format was UUID-filename. Extact the filename part.
+    const originalFilename = filenameWithUuid.replace(/^[0-9a-f-]{36}-/, "");
+
+    const { pool } = await import("@workspace/db");
+    const result = await pool.query(
+      "SELECT content_type, content FROM ctf_files WHERE filename = $1 ORDER BY created_at DESC LIMIT 1",
+      [originalFilename]
+    );
+
+    if (result.rowCount > 0) {
+      const { content_type, content } = result.rows[0];
+      const buffer = Buffer.from(content, "base64");
+      res.setHeader("Content-Type", content_type);
+      res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(originalFilename)}"`);
+      return res.send(buffer);
+    }
+  } catch (e) {
+    logger.error({ err: e }, "Upload fallback error");
+  }
+  next();
+});
+
 app.use("/api", router);
 
 app.use((err: unknown, req: express.Request, res: express.Response, _next: express.NextFunction) => {

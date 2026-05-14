@@ -1,21 +1,31 @@
 import { useRoute, Link } from "wouter";
-import { Trophy, Flag, BookOpen, Target, Calendar, Star, CheckCircle2 } from "lucide-react";
+import { Trophy, Flag, BookOpen, Target, Calendar, Star, CheckCircle2, Share2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLang } from "@/lib/LanguageContext";
 import { useGetUserProfile, getGetUserProfileQueryKey } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { normalizeArray } from "@/lib/api-shapes";
+import { useToast } from "@/hooks/use-toast";
+import { motion } from "framer-motion";
 
 export default function ProfilePage() {
   const [, params] = useRoute("/profile/:id");
   const { t } = useLang();
   const { user: currentUser } = useAuth();
+  const { toast } = useToast();
   const id = params?.id ? Number(params.id) : currentUser?.id;
 
   const { data: profile, isLoading } = useGetUserProfile(id as number, {
     query: { enabled: !!id, queryKey: getGetUserProfileQueryKey(id as number) },
   });
+
+  const handleShare = () => {
+    const url = window.location.href;
+    navigator.clipboard.writeText(url).then(() => {
+      toast({ title: t("Link copied!", "Havola nusxalandi!", "Ссылка скопирована!") });
+    });
+  };
 
   if (isLoading) {
     return (
@@ -50,11 +60,13 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-background pt-14 pb-12">
-      {/* Background Decor */}
       <div className="absolute top-0 left-0 right-0 h-64 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
 
-      <div className="max-w-4xl mx-auto px-4 py-8 relative">
-        {/* Profile Header */}
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="max-w-4xl mx-auto px-4 py-8 relative"
+      >
         <div className="bg-card border border-border rounded-2xl p-6 md:p-8 mb-6 shadow-sm">
           <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
             <div className="w-24 h-24 rounded-2xl bg-primary/10 flex items-center justify-center text-3xl font-bold text-primary flex-shrink-0 shadow-inner overflow-hidden border-2 border-primary/20">
@@ -74,13 +86,19 @@ export default function ProfilePage() {
                     {(profile as any).emailVerified && <CheckCircle2 className="w-4 h-4 text-green-500" />}
                   </p>
                 </div>
-                {isOwn && (
-                  <Link href="/profile/edit">
-                    <Button variant="outline" size="sm" className="rounded-full px-5">
-                      {t("Edit Profile", "Profilni Tahrirlash", "Редактировать")}
-                    </Button>
-                  </Link>
-                )}
+                <div className="flex items-center gap-2 justify-center md:justify-end">
+                  <Button variant="outline" size="sm" onClick={handleShare} className="rounded-full px-4 gap-2">
+                    <Share2 className="w-3.5 h-3.5" />
+                    {t("Share", "Ulashish", "Поделиться")}
+                  </Button>
+                  {isOwn && (
+                    <Link href="/profile/edit">
+                      <Button variant="outline" size="sm" className="rounded-full px-5">
+                        {t("Edit Profile", "Profilni Tahrirlash", "Редактировать")}
+                      </Button>
+                    </Link>
+                  )}
+                </div>
               </div>
 
               {/* Stats Bar */}
@@ -215,7 +233,7 @@ export default function ProfilePage() {
             </section>
           )}
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

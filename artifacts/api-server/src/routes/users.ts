@@ -172,4 +172,22 @@ router.post("/:id/avatar", authenticateToken, upload.single("avatar"), async (re
   res.json({ avatarUrl: updated.avatarUrl });
 });
 
+// DELETE /api/users/:id
+router.delete("/:id", authenticateToken, async (req, res) => {
+  const id = Number(req.params.id);
+  if (req.user!.userId !== id && req.user!.role !== "admin") {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
+  // Cleanup
+  await db.delete(ctfAttemptsTable).where(eq(ctfAttemptsTable.userId, id));
+  await db.delete(userLessonAttemptsTable).where(eq(userLessonAttemptsTable.userId, id));
+  await db.delete(userTitlesTable).where(eq(userTitlesTable.userId, id));
+  await db.delete(competitionUsersTable).where(eq(competitionUsersTable.userId, id));
+  
+  await db.delete(usersTable).where(eq(usersTable.id, id));
+
+  res.json({ success: true, message: "Account deleted" });
+});
+
 export default router;

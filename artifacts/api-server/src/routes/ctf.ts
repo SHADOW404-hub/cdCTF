@@ -4,8 +4,10 @@ import { ctfTasksTable, ctfAttemptsTable, usersTable, userTitlesTable, titlesTab
 import { eq, and, sql } from "drizzle-orm";
 import { authenticateToken, optionalAuth } from "../middleware/auth";
 import { hashFlag, isHashedFlag, verifyFlag } from "../lib/flags";
+import { createRateLimiter } from "../middleware/security";
 
 const router = Router();
+const flagRateLimit = createRateLimiter({ windowMs: 1 * 60 * 1000, max: 10, keyPrefix: "flag" });
 
 // GET /api/ctf
 router.get("/", optionalAuth, async (req, res) => {
@@ -50,52 +52,42 @@ router.get("/", optionalAuth, async (req, res) => {
   for (const a of allAttempts) {
     solveMap.set(a.ctfId, (solveMap.get(a.ctfId) ?? 0) + 1);
   }
-  result = result.map(ch => ({ ...ch, solvedCount: solveMap.get(ch.id) ?? 0 }));
 
-  res.json(result);
-});
+  result.forEach(ch => {
+    ch.solvedCount = solveMap.get(ch.id) ?? 0;
+  });
 
-// GET /api/ctf/stats
-router.get("/stats", async (_req, res) => {
-  const challenges = await db.select().from(ctfTasksTable);
-  const allAttempts = await db.select().from(ctfAttemptsTable).where(eq(ctfAttemptsTable.solved, true));
-  const solveMap = new Map<number, number>();
-  for (const a of allAttempts) {
-    solveMap.set(a.ctfId, (solveMap.get(a.ctfId) ?? 0) + 1);
-  }
-
-  const categoryCounts = Object.entries(
-    challenges.reduce((acc, ch) => { acc[ch.category] = (acc[ch.category] ?? 0) + 1; return acc; }, {} as Record<string, number>)
-  ).map(([category, count]) => ({ category, count }));
-
-  const mostSolved = [...challenges]
-    .map(ch => ({ id: ch.id, name: ch.name, solvedCount: solveMap.get(ch.id) ?? 0 }))
-    .sort((a, b) => b.solvedCount - a.solvedCount)
-    .slice(0, 5);
-
-  res.json({ totalChallenges: challenges.length, categoryCounts, mostSolved });
+  res.json({ challenges: result });
 });
 
 // GET /api/ctf/:id
 router.get("/:id", optionalAuth, async (req, res) => {
-  const id = Number(req.params.id);
-  const [challenge] = await db.select().from(ctfTasksTable).where(eq(ctfTasksTable.id, id)).limit(1);
+  const ctfId = Number(req.params.id);
+  const userId = req.user?.userId;
+
+  if (!Number.isInteger(ctfId) || ctfId <= 0) return res.status(400).json({ error: "Invalid CTF id" });
+
+  const [challenge] = await db.select().from(ctfTasksTable).where(eq(ctfTasksTable.id, ctfId)).limit(1);
   if (!challenge) return res.status(404).json({ error: "Not found" });
 
-  const allAttempts = await db.select().from(ctfAttemptsTable).where(eq(ctfAttemptsTable.ctfId, id));
-  const solvedCount = allAttempts.filter(a => a.solved).length;
-
   let userAttempt = null;
-  if (req.user) {
-    userAttempt = allAttempts.find(a => a.userId === req.user!.userId) ?? null;
+  if (userId) {
+    [userAttempt] = await db.select().from(ctfAttemptsTable).where(and(eq(ctfAttemptsTable.userId, userId), eq(ctfAttemptsTable.ctfId, ctfId))).limit(1);
   }
 
   res.json({
-    id: challenge.id, name: challenge.name, nameUz: challenge.nameUz, nameRu: challenge.nameRu,
-    description: challenge.description, descriptionUz: challenge.descriptionUz, descriptionRu: challenge.descriptionRu,
-    category: challenge.category, difficulty: challenge.difficulty, points: challenge.points,
-    hintCost: challenge.hintCost, fileUrl: challenge.fileUrl,
-    solvedCount,
+    id: challenge.id,
+    name: challenge.name,
+    nameUz: challenge.nameUz,
+    nameRu: challenge.nameRu,
+    description: challenge.description,
+    descriptionUz: challenge.descriptionUz,
+    descriptionRu: challenge.descriptionRu,
+    category: challenge.category,
+    difficulty: challenge.difficulty,
+    points: challenge.points,
+    fileUrl: challenge.fileUrl,
+    hintCost: challenge.hintCost,
     isSolved: userAttempt?.solved ?? false,
     isBlocked: userAttempt?.blocked ?? false,
     hintUsed: userAttempt?.hintUsed ?? false,
@@ -137,30 +129,28 @@ async function submitFlagHandler(req: Request, res: Response) {
     }
 
     await db.update(usersTable).set({ points: sql`${usersTable.points} + ${pointsToAward}` }).where(eq(usersTable.id, userId));
-
-    // Check for title award
     await checkAndAwardTitle(userId, challenge.category);
 
-    return res.json({ correct: true, blocked: false, wrongAttempts: 0, pointsEarned: pointsToAward });
+    return res.json({ correct: true, blocked: false, pointsEarned: pointsToAward });
   } else {
-    const newWrongAttempts = (attempt?.wrongAttempts ?? 0) + 1;
-    const blocked = newWrongAttempts >= 3;
+    const wrongAttempts = (attempt?.wrongAttempts ?? 0) + 1;
+    const isBlocked = wrongAttempts >= 5;
 
     if (!attempt) {
-      await db.insert(ctfAttemptsTable).values({ userId, ctfId, wrongAttempts: newWrongAttempts, blocked, blockedAt: blocked ? new Date() : undefined, updatedAt: new Date() });
+      await db.insert(ctfAttemptsTable).values({ userId, ctfId, wrongAttempts, blocked: isBlocked, updatedAt: new Date() });
     } else {
-      await db.update(ctfAttemptsTable).set({ wrongAttempts: newWrongAttempts, blocked, blockedAt: blocked ? new Date() : null, updatedAt: new Date() }).where(eq(ctfAttemptsTable.id, attempt.id));
+      await db.update(ctfAttemptsTable).set({ wrongAttempts, blocked: isBlocked, updatedAt: new Date() }).where(eq(ctfAttemptsTable.id, attempt.id));
     }
 
-    return res.json({ correct: false, blocked, wrongAttempts: newWrongAttempts });
+    return res.json({ correct: false, blocked: isBlocked, wrongAttempts });
   }
 }
 
 // POST /api/ctf/:id/submit
-router.post("/:id/submit", authenticateToken, submitFlagHandler);
+router.post("/:id/submit", authenticateToken, flagRateLimit, submitFlagHandler);
 
 // Backward-compatible alias.
-router.post("/:id/flag", authenticateToken, submitFlagHandler);
+router.post("/:id/flag", authenticateToken, flagRateLimit, submitFlagHandler);
 
 // POST /api/ctf/:id/hint
 router.post("/:id/hint", authenticateToken, async (req, res) => {

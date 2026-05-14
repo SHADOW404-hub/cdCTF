@@ -29,6 +29,9 @@ import AdminLessonsPage from "@/pages/admin/AdminLessonsPage";
 import AdminBlockedPage from "@/pages/admin/AdminBlockedPage";
 import AdminAuditPage from "@/pages/admin/AdminAuditPage";
 import CompetitionCtfPage from "@/pages/CompetitionCtfPage";
+import ResendVerificationPage from "@/pages/ResendVerificationPage";
+import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
+import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import NotFound from "@/pages/not-found";
 
 function AdminRoute({ component: Component }: { component: React.ComponentType }) {
@@ -54,6 +57,9 @@ function Router() {
         <Route path="/login" component={LoginPage} />
         <Route path="/register" component={RegisterPage} />
         <Route path="/verify-email" component={VerifyEmailPage} />
+        <Route path="/forgot-password" component={ForgotPasswordPage} />
+        <Route path="/reset-password" component={ResetPasswordPage} />
+        <Route path="/resend-verification" component={ResendVerificationPage} />
         <Route path="/ctf" component={CtfListPage} />
         <Route path="/ctf/:id" component={CtfDetailPage} />
         <Route path="/learn" component={LearnPage} />

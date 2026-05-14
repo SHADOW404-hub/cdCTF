@@ -97,6 +97,37 @@ export async function sendVerificationEmail(email: string, token: string) {
     }),
   }) as unknown as FetchResponseLike;
 
+export async function sendPasswordResetEmail(email: string, token: string) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.RESEND_FROM_EMAIL;
+  if (!apiKey || !from) return { ok: false, reason: "Resend is not configured" };
+
+  const baseUrl = buildBaseUrl();
+  if (!baseUrl) return { ok: false, reason: "APP_BASE_URL is not configured" };
+
+  const resetUrl = `${baseUrl}/reset-password?token=${encodeURIComponent(token)}`;
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from,
+      to: [email],
+      subject: "Reset your cdCTF password",
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111827;">
+          <h2>Reset your password</h2>
+          <p>We received a request to reset your password. Click the button below to continue.</p>
+          <p><a href="${resetUrl}" style="display:inline-block;padding:12px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:8px;">Reset password</a></p>
+          <p>If you did not request this, please ignore this email.</p>
+          <p>${resetUrl}</p>
+        </div>
+      `,
+    }),
+  }) as unknown as FetchResponseLike;
+
   return { ok: response.ok, reason: response.ok ? undefined : `Resend returned ${response.status}` };
 }
 

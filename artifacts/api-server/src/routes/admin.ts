@@ -50,6 +50,21 @@ router.get("/dashboard", async (_req, res) => {
     .slice(0, 5)
     .map(u => ({ id: u.id, nickname: u.nickname, points: u.points }));
 
+  // Registration History (last 7 days)
+  const now = new Date();
+  const registrationHistory = Array.from({ length: 7 }).map((_, i) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().split("T")[0];
+    const count = users.filter(u => u.createdAt.toISOString().split("T")[0] === dateStr).length;
+    return { date: dateStr, count };
+  }).reverse();
+
+  // Category Distribution
+  const categoryMap = new Map<string, number>();
+  for (const ch of ctfs) categoryMap.set(ch.category, (categoryMap.get(ch.category) ?? 0) + 1);
+  const categoryDistribution = Array.from(categoryMap.entries()).map(([name, value]) => ({ name, value }));
+
   res.json({
     totalUsers: users.length,
     activeUsers,
@@ -60,6 +75,8 @@ router.get("/dashboard", async (_req, res) => {
     blockedTasksCount: blockedCtf.length + blockedLessons.length,
     mostSolvedCtf,
     mostActiveUsers,
+    registrationHistory,
+    categoryDistribution,
   });
 });
 

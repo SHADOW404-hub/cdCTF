@@ -3,10 +3,10 @@ import bcrypt from "bcryptjs";
 import { randomUUID } from "node:crypto";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { AUTH_COOKIE_NAME, AUTH_SESSION_MAX_AGE_MS, generateToken, authenticateToken, optionalAuth } from "../middleware/auth";
 import { createRateLimiter } from "../middleware/security";
-import { sendVerificationEmail, verifyTurnstileToken } from "../lib/integrations";
+import { sendVerificationEmail, verifyTurnstileToken, sendPasswordResetEmail } from "../lib/integrations";
 
 const router = Router();
 const authRateLimit = createRateLimiter({ windowMs: 15 * 60 * 1000, max: 20, keyPrefix: "auth" });
@@ -204,6 +204,65 @@ router.post("/resend-verification", authRateLimit, async (req, res) => {
   }
 
   res.json({ success: true, message: "Verification email sent" });
+});
+
+router.post("/forgot-password", authRateLimit, async (req, res) => {
+  const email = typeof req.body?.email === "string" ? normalizeEmail(req.body.email) : "";
+  if (!email) return res.status(400).json({ error: "Email required" });
+
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+  if (!user) return res.json({ success: true, message: "If an account exists, a reset link has been sent" });
+
+  const token = randomUUID();
+  const expires = new Date(Date.now() + 3600000); // 1 hour
+  await db.update(usersTable).set({ passwordResetToken: token, passwordResetExpires: expires }).where(eq(usersTable.id, user.id));
+
+  const emailResult = await sendPasswordResetEmail(user.email, token);
+  if (!emailResult.ok) {
+    return res.status(503).json({ error: "Failed to send reset email" });
+  }
+
+  res.json({ success: true, message: "If an account exists, a reset link has been sent" });
+});
+
+router.post("/reset-password", authRateLimit, async (req, res) => {
+  const { token, password } = req.body;
+  if (typeof token !== "string" || !token) return res.status(400).json({ error: "Token required" });
+  if (typeof password !== "string" || !isStrongPassword(password)) {
+    return res.status(400).json({ error: "Password must be at least 10 chars and include uppercase, lowercase, number, and symbol" });
+  }
+
+  const [user] = await db.select().from(usersTable)
+    .where(and(eq(usersTable.passwordResetToken, token), sql`${usersTable.passwordResetExpires} > now()`))
+    .limit(1);
+  
+  if (!user) return res.status(400).json({ error: "Invalid or expired token" });
+
+  const passwordHash = await bcrypt.hash(password, 12);
+  await db.update(usersTable).set({ passwordHash, passwordResetToken: null, passwordResetExpires: null }).where(eq(usersTable.id, user.id));
+
+  res.json({ success: true, message: "Password has been reset" });
+});
+
+router.post("/change-password", authenticateToken, async (req, res) => {
+  const { oldPassword, newPassword } = req.body;
+  if (typeof oldPassword !== "string" || typeof newPassword !== "string") {
+    return res.status(400).json({ error: "Passwords required" });
+  }
+  if (!isStrongPassword(newPassword)) {
+    return res.status(400).json({ error: "New password must be at least 10 chars and include uppercase, lowercase, number, and symbol" });
+  }
+
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.user!.userId)).limit(1);
+  if (!user) return res.status(404).json({ error: "User not found" });
+
+  const valid = await bcrypt.compare(oldPassword, user.passwordHash);
+  if (!valid) return res.status(400).json({ error: "Current password incorrect" });
+
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  await db.update(usersTable).set({ passwordHash }).where(eq(usersTable.id, user.id));
+
+  res.json({ success: true, message: "Password updated" });
 });
 
 export default router;

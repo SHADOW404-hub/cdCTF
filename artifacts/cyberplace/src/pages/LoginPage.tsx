@@ -75,7 +75,12 @@ export default function LoginPage() {
               )} />
               <FormField control={form.control} name="password" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t("Password", "Parol", "Пароль")}</FormLabel>
+                  <div className="flex items-center justify-between">
+                    <FormLabel>{t("Password", "Parol", "Пароль")}</FormLabel>
+                    <Link href="/forgot-password" size="sm" className="text-xs text-primary hover:underline">
+                      {t("Forgot Password?", "Parolni unutdingizmi?", "Забыли пароль?")}
+                    </Link>
+                  </div>
                   <FormControl>
                     <Input {...field} type="password" placeholder="••••••••" data-testid="input-password" autoComplete="current-password" />
                   </FormControl>
@@ -96,7 +101,10 @@ export default function LoginPage() {
           </Link>
         </p>
         <p className="text-center text-xs text-muted-foreground mt-2">
-          {t("New accounts must verify email before login.", "Yangi hisoblar kirishdan oldin emailni tasdiqlashi kerak.", "Новые аккаунты должны подтвердить email перед входом.")}
+          {t("New accounts must verify email before login.", "Yangi hisoblar kirishdan oldin emailni tasdiqlashi kerak.", "Новые аккаунты должны подтвердить email перед входом.")}{" "}
+          <Link href="/resend-verification" className="text-primary hover:underline">
+            {t("Resend email", "Emailni qayta yuborish", "Yuborish")}
+          </Link>
         </p>
       </div>
     </div>

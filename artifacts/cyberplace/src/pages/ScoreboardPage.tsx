@@ -10,7 +10,7 @@ export default function ScoreboardPage() {
   const { t } = useLang();
   const { user } = useAuth();
   const { data, isLoading } = useGetScoreboard({ limit: 100 }, {
-    query: { queryKey: getGetScoreboardQueryKey({ limit: 100 }) },
+    query: { queryKey: getGetScoreboardQueryKey({ limit: 100 }), refetchInterval: 30000 },
   });
   const entries = normalizeArray<any>(data?.entries, ["entries", "data", "items"]);
   const total = typeof data?.total === "number" ? data.total : entries.length;

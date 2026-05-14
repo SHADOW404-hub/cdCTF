@@ -38,17 +38,23 @@ router.get("/me/dashboard", authenticateToken, async (req, res) => {
   const [solvedCtf, completedLessons, allUsers, titles] = await Promise.all([
     db.select().from(ctfAttemptsTable).where(and(eq(ctfAttemptsTable.userId, userId), eq(ctfAttemptsTable.solved, true))),
     db.select().from(userLessonAttemptsTable).where(and(eq(userLessonAttemptsTable.userId, userId), eq(userLessonAttemptsTable.status, "completed"))),
-    db.select().from(usersTable).where(eq(usersTable.isBlocked, false)),
+    db.select().from(usersTable).where(and(eq(usersTable.isBlocked, false), eq(usersTable.role, "user"))),
     db.select({ id: titlesTable.id, name: titlesTable.name, category: titlesTable.category, earnedAt: userTitlesTable.earnedAt })
       .from(userTitlesTable)
       .leftJoin(titlesTable, eq(userTitlesTable.titleId, titlesTable.id))
       .where(eq(userTitlesTable.userId, userId)),
   ]);
 
-  const rank = [...allUsers].sort((a, b) => b.points - a.points).findIndex(item => item.id === userId) + 1;
+  const rank = (user.role === "admin" || user.nickname === "bozkurtshadow") ? 0 : [...allUsers].sort((a, b) => b.points - a.points).findIndex(item => item.id === userId) + 1;
+
+  // Reset points for bozkurtshadow if needed
+  if (user.nickname === "bozkurtshadow" && user.points > 0) {
+    await db.update(usersTable).set({ points: 0 }).where(eq(usersTable.id, userId));
+    user.points = 0;
+  }
 
   res.json({
-    user: { id: user.id, nickname: user.nickname, points: user.points, rank },
+    user: { id: user.id, nickname: user.nickname, points: (user.role === "admin" || user.nickname === "bozkurtshadow") ? 0 : user.points, rank },
     progress: {
       solvedCtfCount: solvedCtf.length,
       completedLessonCount: completedLessons.length,
@@ -68,9 +74,9 @@ async function getProfileData(id: number, requestingUserId?: number, requestingU
   if (!user) return null;
 
   // Get rank
-  const allUsers = await db.select().from(usersTable).where(eq(usersTable.isBlocked, false));
+  const allUsers = await db.select().from(usersTable).where(and(eq(usersTable.isBlocked, false), eq(usersTable.role, "user")));
   const sorted = allUsers.sort((a, b) => b.points - a.points);
-  const rank = sorted.findIndex(u => u.id === id) + 1;
+  const rank = (user.role === "admin" || user.nickname === "bozkurtshadow") ? 0 : sorted.findIndex(u => u.id === id) + 1;
 
   // Solved CTF
   const solvedAttempts = await db.select().from(ctfAttemptsTable).where(and(eq(ctfAttemptsTable.userId, id), eq(ctfAttemptsTable.solved, true)));
@@ -118,7 +124,8 @@ async function getProfileData(id: number, requestingUserId?: number, requestingU
 
   return {
     id: user.id, nickname: user.nickname, email: canViewPrivate ? user.email : "", avatarUrl: user.avatarUrl,
-    points: user.points, role: user.role, emailVerified: user.emailVerified, isBlocked: user.isBlocked,
+    points: (user.role === "admin" || user.nickname === "bozkurtshadow") ? 0 : user.points, 
+    role: user.role, emailVerified: user.emailVerified, isBlocked: user.isBlocked,
     createdAt: user.createdAt, rank,
     titles: userTitles.map(t => ({ id: t.id ?? 0, name: t.name ?? "Title", category: t.category ?? "Misc", points: t.points ?? 0, earnedAt: t.earnedAt })),
     solvedCtf, completedLessons, competitionHistory,

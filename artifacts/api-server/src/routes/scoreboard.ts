@@ -10,7 +10,7 @@ router.get("/", optionalAuth, async (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 50, 200);
   const currentUserId = req.user?.userId;
 
-  const users = await db.select().from(usersTable).where(eq(usersTable.isBlocked, false));
+  const users = await db.select().from(usersTable).where(and(eq(usersTable.isBlocked, false), eq(usersTable.role, "user")));
 
   const allCtfSolves = await db.select().from(ctfAttemptsTable).where(eq(ctfAttemptsTable.solved, true));
   const allLessonCompletes = await db.select().from(userLessonAttemptsTable).where(eq(userLessonAttemptsTable.status, "completed"));

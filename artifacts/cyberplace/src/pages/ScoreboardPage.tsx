@@ -32,7 +32,7 @@ export default function ScoreboardPage() {
 
   const { data, isLoading } = useGetScoreboard(queryParams, {
     query: { queryKey: getGetScoreboardQueryKey(queryParams), refetchInterval: 30000 },
-  });
+  }) as any;
 
   const entries = normalizeArray<any>(data?.entries, ["entries", "data", "items"]);
   const total = data?.total || 0;

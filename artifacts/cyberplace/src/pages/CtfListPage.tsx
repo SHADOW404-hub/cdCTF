@@ -37,7 +37,7 @@ export default function CtfListPage() {
   const { data, isLoading } = useListCtfChallenges(
     queryParams,
     { query: { queryKey: getListCtfChallengesQueryKey(queryParams) } }
-  );
+  ) as any;
 
   const challenges = normalizeCtfChallenges(data?.challenges || []);
   const totalPages = data?.totalPages || 1;

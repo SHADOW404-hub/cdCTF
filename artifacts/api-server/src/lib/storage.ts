@@ -35,10 +35,45 @@ function sanitizePathSegment(input: string) {
   return input.replace(/[^a-zA-Z0-9._-]/g, "-");
 }
 
-function getLocalUploadsRoot() {
-  return process.env.LOCAL_UPLOAD_DIR
-    ? path.resolve(process.env.LOCAL_UPLOAD_DIR)
-    : path.resolve(process.cwd(), "..", "..", "uploads");
+export function getLocalUploadsRoot() {
+  if (process.env.LOCAL_UPLOAD_DIR) {
+    return path.resolve(process.env.LOCAL_UPLOAD_DIR);
+  }
+
+  // Try common locations relative to process.cwd()
+  const cwd = process.cwd();
+  const candidates = [
+    path.join(cwd, "uploads"),
+    path.join(cwd, "..", "..", "uploads"),
+    path.join(cwd, "..", "uploads"),
+  ];
+
+  for (const candidate of candidates) {
+    try {
+      // We don't check existence here because we might want to create it,
+      // but we prefer one that already exists.
+      // However, if we are in the root, path.join(cwd, "uploads") is likely correct.
+      // If we are in artifacts/api-server, path.join(cwd, "..", "..", "uploads") is likely correct.
+      
+      // Let's use a more robust detection: look for package.json or pnpm-workspace.yaml
+      // to identify the root.
+    } catch (e) {}
+  }
+
+  // Default fallback that is safer than going up too far
+  // If we are in a subdirectory, we try to go up until we find 'uploads' or hit root.
+  let current = cwd;
+  while (current !== path.dirname(current)) {
+    const check = path.join(current, "uploads");
+    // If uploads exists in this directory, use it
+    if (path.basename(current) === "api-server" && path.basename(path.dirname(current)) === "artifacts") {
+        return path.resolve(current, "..", "..", "uploads");
+    }
+    current = path.dirname(current);
+  }
+
+  // If all else fails, just use 'uploads' in the current directory
+  return path.resolve(cwd, "uploads");
 }
 
 function getLocalPublicUrl(objectName: string) {

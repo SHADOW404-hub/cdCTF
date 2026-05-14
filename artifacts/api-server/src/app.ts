@@ -3,6 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import multer from "multer";
 import path from "node:path";
+import { getLocalUploadsRoot } from "./lib/storage";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { reportErrorToSentry } from "./lib/integrations";
@@ -40,7 +41,7 @@ app.use(createRateLimiter({ windowMs: 15 * 60 * 1000, max: 600, keyPrefix: "glob
 app.use(cookieParser());
 app.use(express.json({ limit: REQUEST_BODY_LIMIT }));
 app.use(express.urlencoded({ extended: true, limit: REQUEST_BODY_LIMIT }));
-app.use("/uploads", express.static(process.env.LOCAL_UPLOAD_DIR ? path.resolve(process.env.LOCAL_UPLOAD_DIR) : path.resolve(process.cwd(), "..", "..", "uploads")));
+app.use("/uploads", express.static(getLocalUploadsRoot()));
 
 app.use("/api", router);
 

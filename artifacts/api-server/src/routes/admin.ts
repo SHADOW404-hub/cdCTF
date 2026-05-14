@@ -149,10 +149,41 @@ router.put("/ctf/:id", updateCtfHandler);
 router.delete("/ctf/:id", async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: "Invalid CTF id" });
-  await db.delete(ctfAttemptsTable).where(eq(ctfAttemptsTable.ctfId, id));
-  await db.delete(ctfTasksTable).where(eq(ctfTasksTable.id, id));
-  await writeAuditLog(req, "ctf.delete", "ctf", id);
-  res.json({ success: true, message: "CTF deleted" });
+
+  try {
+    // 1. Get the challenge to know its points
+    const [challenge] = await db.select().from(ctfTasksTable).where(eq(ctfTasksTable.id, id)).limit(1);
+    if (!challenge) return res.status(404).json({ error: "CTF not found" });
+
+    // 2. Find all users who solved this challenge
+    const solvers = await db.select()
+      .from(ctfAttemptsTable)
+      .where(and(eq(ctfAttemptsTable.ctfId, id), eq(ctfAttemptsTable.solved, true)));
+
+    // 3. Deduct points from each solver
+    if (solvers.length > 0) {
+      for (const solve of solvers) {
+        await db.update(usersTable)
+          .set({ points: sql`GREATEST(${usersTable.points} - ${challenge.points}, 0)` })
+          .where(eq(usersTable.id, solve.userId));
+      }
+    }
+
+    // 4. Delete related attempts and then the task
+    await db.delete(ctfAttemptsTable).where(eq(ctfAttemptsTable.ctfId, id));
+    await db.delete(ctfTasksTable).where(eq(ctfTasksTable.id, id));
+
+    await writeAuditLog(req, "ctf.delete", "ctf", id, { 
+      name: challenge.name, 
+      pointsDeducted: challenge.points, 
+      solverCount: solvers.length 
+    });
+
+    res.json({ success: true, message: "CTF deleted and user points updated" });
+  } catch (error) {
+    logger.error({ err: error }, "Error deleting CTF and updating points");
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 // POST /api/admin/ctf/:id/unblock-user

@@ -109,7 +109,7 @@ export default function AdminCtfPage() {
       category: ch.category || "Web",
       difficulty: (ch.difficulty as any) || "easy",
       points: ch.points || 100,
-      flag: ch.flag ? "••••••••" : "",
+      flag: ch.flag || "",
       fileUrl: ch.fileUrl || "",
     });
     setShowForm(true);
@@ -122,9 +122,6 @@ export default function AdminCtfPage() {
     }
 
     const payload: any = { ...data, nameUz: data.nameUz || null, nameRu: data.nameRu || null, descriptionUz: data.descriptionUz || null, descriptionRu: data.descriptionRu || null, fileUrl: data.fileUrl || null };
-    if (editingId && (data.flag === "••••••••" || !data.flag || !data.flag.trim())) {
-      delete payload.flag;
-    }
     
     const invalidate = () => { qc.invalidateQueries({ queryKey: ["admin-ctfs"] }); setShowForm(false); };
     if (editingId) {
@@ -246,7 +243,7 @@ export default function AdminCtfPage() {
                   <FormItem><FormLabel>{t("Name (EN)", "Nomi (EN)", "Название (EN)")}</FormLabel><FormControl><Input {...field} data-testid="input-ctf-name" /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="flag" render={({ field }) => (
-                  <FormItem><FormLabel>{t("Flag", "Flag", "Флаг")}</FormLabel><FormControl><Input {...field} placeholder={editingId ? t("Leave empty to keep current", "Joriy flagni saqlash uchun bo'sh qoldiring", "Оставьте пустым, чтобы сохранить") : "Flag{...}"} className="font-mono" data-testid="input-ctf-flag" /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>{t("Flag", "Flag", "Флаг")}</FormLabel><FormControl><Input {...field} placeholder="Flag{...}" className="font-mono" data-testid="input-ctf-flag" /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="nameUz" render={({ field }) => (
 	                  <FormItem><FormLabel>{t("Name (UZ)", "Nomi (UZ)", "Название (UZ)")}</FormLabel><FormControl><Input {...field} value={field.value ?? ""} /></FormControl></FormItem>

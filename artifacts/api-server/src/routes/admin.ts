@@ -208,8 +208,9 @@ router.post("/ctf", async (req, res) => {
   const { name, nameUz, nameRu, description, descriptionUz, descriptionRu, category, difficulty, points, hint, flag, fileUrl } = req.body;
   if (!name || !description || !category || !difficulty || !points || !flag) return res.status(400).json({ error: "Missing required fields" });
   const [task] = await db.insert(ctfTasksTable).values({
-    name, nameUz, nameRu, description, descriptionUz, descriptionRu,
-    category, difficulty, points: Number(points), hint, flag: hashFlag(String(flag)), fileUrl,
+    name, nameUz: nameUz || null, nameRu: nameRu || null, 
+    description, descriptionUz: descriptionUz || null, descriptionRu: descriptionRu || null, 
+    category, difficulty, points: Number(points), hint, flag: String(flag).trim(), fileUrl,
     hintCost: 10,
   }).returning();
   await writeAuditLog(req, "ctf.create", "ctf", task.id, { name: task.name, category: task.category, difficulty: task.difficulty });
@@ -225,9 +226,10 @@ async function updateCtfHandler(req: Request, res: Response) {
   const updates = filterAllowedUpdates(userRole, "ctf_tasks", req.body);
 
   if (updates.points !== undefined) updates.points = Number(updates.points);
+  // User requested to see cleartext flags in admin panel
   if (updates.flag !== undefined) {
     if (typeof updates.flag === "string" && updates.flag.trim()) {
-      updates.flag = hashFlag(updates.flag.trim());
+      updates.flag = updates.flag.trim();
     } else {
       delete updates.flag;
     }

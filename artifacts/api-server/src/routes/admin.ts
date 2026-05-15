@@ -204,6 +204,14 @@ router.get("/ctf", async (_req, res) => {
 });
 
 // POST /api/admin/ctf
+// GET /api/admin/ctf/:id
+router.get("/ctf/:id", async (req, res) => {
+  const id = Number(req.params.id);
+  const [task] = await db.select().from(ctfTasksTable).where(eq(ctfTasksTable.id, id)).limit(1);
+  if (!task) return res.status(404).json({ error: "Not found" });
+  res.json(task);
+});
+
 router.post("/ctf", async (req, res) => {
   const { name, nameUz, nameRu, description, descriptionUz, descriptionRu, category, difficulty, points, hint, flag, fileUrl } = req.body;
   if (!name || !description || !category || !difficulty || !points || !flag) return res.status(400).json({ error: "Missing required fields" });

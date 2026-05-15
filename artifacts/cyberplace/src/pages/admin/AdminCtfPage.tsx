@@ -97,22 +97,30 @@ export default function AdminCtfPage() {
     });
     setShowForm(true);
   };
-  const openEdit = (ch: any) => {
-    setEditingId(ch.id);
-    form.reset({
-      name: ch.name || "",
-      nameUz: ch.nameUz || ch.name_uz || "",
-      nameRu: ch.nameRu || ch.name_ru || "",
-      description: ch.description || "",
-      descriptionUz: ch.descriptionUz || ch.description_uz || "",
-      descriptionRu: ch.descriptionRu || ch.description_ru || "",
-      category: ch.category || "Web",
-      difficulty: (ch.difficulty as any) || "easy",
-      points: ch.points || 100,
-      flag: ch.flag || "",
-      fileUrl: ch.fileUrl || ch.file_url || "",
-    });
-    setShowForm(true);
+  const openEdit = async (ch: any) => {
+    try {
+      const res = await fetch(`/api/admin/ctf/${ch.id}`, { credentials: "include" });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      
+      setEditingId(ch.id);
+      form.reset({
+        name: data.name || "",
+        nameUz: data.nameUz || data.name_uz || "",
+        nameRu: data.nameRu || data.name_ru || "",
+        description: data.description || "",
+        descriptionUz: data.descriptionUz || data.description_uz || "",
+        descriptionRu: data.descriptionRu || data.description_ru || "",
+        category: data.category || "Web",
+        difficulty: (data.difficulty as any) || "easy",
+        points: data.points || 100,
+        flag: data.flag || "",
+        fileUrl: data.fileUrl || data.file_url || "",
+      });
+      setShowForm(true);
+    } catch (e) {
+      toast({ title: t("Error loading details", "Tafsilotlarni yuklashda xato", "Ошибка загрузки данных"), variant: "destructive" });
+    }
   };
 
   const onSubmit = (data: FormData) => {

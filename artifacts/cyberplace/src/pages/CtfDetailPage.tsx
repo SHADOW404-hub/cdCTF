@@ -113,8 +113,8 @@ export default function CtfDetailPage() {
         <div className="grid lg:grid-cols-3 gap-12">
           <div className="lg:col-span-2 space-y-12">
             {/* Briefing */}
-            <div className="glass-card bg-muted/20 border-border p-8 rounded-[2.5rem] relative group">
-              <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+            <div className="glass-card bg-muted/20 border-border p-8 rounded-[2.5rem] relative group overflow-hidden">
+              <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
                 <Shield className="w-48 h-48 text-primary" />
               </div>
               <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-8 flex items-center gap-3">

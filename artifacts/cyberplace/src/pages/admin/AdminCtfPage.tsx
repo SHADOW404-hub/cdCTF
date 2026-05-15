@@ -15,7 +15,7 @@ import { useLang } from "@/lib/LanguageContext";
 import { normalizeCtfChallenges } from "@/lib/api-shapes";
 import { useListCtfChallenges, getListCtfChallengesQueryKey, useAdminCreateCtf, useAdminUpdateCtf, useAdminDeleteCtf } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 
 const schema = z.object({
   name: z.string().min(1),
@@ -49,10 +49,15 @@ export default function AdminCtfPage() {
   const [uploadingFile, setUploadingFile] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const { data: challenges, isLoading } = useListCtfChallenges({}, {
-    query: { queryKey: getListCtfChallengesQueryKey({}) },
+  const { data: challengesData, isLoading } = useQuery({
+    queryKey: ["admin-ctfs"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/ctf", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch admin ctfs");
+      return res.json();
+    }
   });
-  const challengeList = normalizeCtfChallenges(challenges);
+  const challengeList = normalizeCtfChallenges(challengesData);
 
   const createCtf = useAdminCreateCtf();
   const updateCtf = useAdminUpdateCtf();
@@ -92,20 +97,20 @@ export default function AdminCtfPage() {
     });
     setShowForm(true);
   };
-  const openEdit = (ch: NonNullable<typeof challengeList>[0] & { description?: string; flag?: string }) => {
+  const openEdit = (ch: any) => {
     setEditingId(ch.id);
     form.reset({
-      name: ch.name,
-      nameUz: "",
-      nameRu: "",
-      description: (ch as { description?: string }).description ?? "",
-      descriptionUz: "",
-      descriptionRu: "",
-      category: ch.category,
-      difficulty: ch.difficulty as "easy" | "medium" | "hard" | "insane",
-      points: ch.points,
-      flag: "",
-      fileUrl: "",
+      name: ch.name || "",
+      nameUz: ch.nameUz || "",
+      nameRu: ch.nameRu || "",
+      description: ch.description || "",
+      descriptionUz: ch.descriptionUz || "",
+      descriptionRu: ch.descriptionRu || "",
+      category: ch.category || "Web",
+      difficulty: (ch.difficulty as any) || "easy",
+      points: ch.points || 100,
+      flag: "", // Don't show hashed flag
+      fileUrl: ch.fileUrl || "",
     });
     setShowForm(true);
   };

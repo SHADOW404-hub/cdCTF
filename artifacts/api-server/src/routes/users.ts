@@ -158,16 +158,22 @@ router.get("/:id", optionalAuth, async (req, res) => {
   }
 });
 
+import { filterAllowedUpdates } from "../lib/rbac";
+
 // PATCH /api/users/:id
 router.patch("/:id", authenticateToken, async (req, res) => {
   const id = Number(req.params.id);
-  if (req.user!.userId !== id && req.user!.role !== "admin") {
+  const userRole = req.user!.role;
+
+  if (req.user!.userId !== id && userRole !== "admin") {
     return res.status(403).json({ error: "Forbidden" });
   }
-  const { nickname } = req.body;
-  const updates: { nickname?: string } = {};
-  if (typeof nickname === "string") {
-    const normalizedNickname = nickname.trim();
+
+  // Filter updates based on RBAC
+  const updates = filterAllowedUpdates(userRole, "users", req.body);
+
+  if (updates.nickname) {
+    const normalizedNickname = String(updates.nickname).trim();
     if (normalizedNickname.length < 3 || normalizedNickname.length > 32 || !/^[A-Za-z0-9_]+$/.test(normalizedNickname)) {
       return res.status(400).json({ error: "Nickname must be 3-32 chars and use only letters, numbers, or underscores" });
     }
@@ -175,9 +181,26 @@ router.patch("/:id", authenticateToken, async (req, res) => {
     if (existing && existing.id !== id) return res.status(409).json({ error: "Nickname taken" });
     updates.nickname = normalizedNickname;
   }
-  if (Object.keys(updates).length === 0) return res.status(400).json({ error: "Nothing to update" });
-  const [updated] = await db.update(usersTable).set(updates).where(eq(usersTable.id, id)).returning();
-  res.json({ id: updated.id, nickname: updated.nickname, email: updated.email, avatarUrl: updated.avatarUrl, points: updated.points, role: updated.role, emailVerified: updated.emailVerified, isBlocked: updated.isBlocked, createdAt: updated.createdAt });
+
+  if (Object.keys(updates).length === 0) return res.status(400).json({ error: "Nothing to update or no permission for these fields" });
+
+  try {
+    const [updated] = await db.update(usersTable).set(updates).where(eq(usersTable.id, id)).returning();
+    res.json({ 
+      id: updated.id, 
+      nickname: updated.nickname, 
+      email: updated.email, 
+      avatarUrl: updated.avatarUrl, 
+      points: updated.points, 
+      role: updated.role, 
+      emailVerified: updated.emailVerified, 
+      isBlocked: updated.isBlocked, 
+      createdAt: updated.createdAt 
+    });
+  } catch (err) {
+    logger.error({ err }, "Error updating user");
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 // POST /api/users/:id/avatar

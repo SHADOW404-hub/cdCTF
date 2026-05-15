@@ -12,6 +12,7 @@ import { authenticateToken, requireAdmin } from "../middleware/auth";
 import { writeAuditLog } from "../lib/audit";
 import { hashFlag } from "../lib/flags";
 import { logger } from "../lib/logger";
+import { filterAllowedUpdates } from "../lib/rbac";
 
 const router = Router();
 router.use(authenticateToken, requireAdmin);
@@ -185,6 +186,23 @@ router.post("/users/recalculate-points", async (req, res) => {
   }
 });
 
+// GET /api/admin/ctf
+router.get("/ctf", async (_req, res) => {
+  const challenges = await db.select().from(ctfTasksTable);
+  const solves = await db.select({ ctfId: ctfAttemptsTable.ctfId }).from(ctfAttemptsTable).where(eq(ctfAttemptsTable.solved, true));
+  const solveCounts = solves.reduce((acc, s) => {
+    acc[s.ctfId] = (acc[s.ctfId] || 0) + 1;
+    return acc;
+  }, {} as Record<number, number>);
+
+  res.json({
+    challenges: challenges.map(ch => ({
+      ...ch,
+      solvedCount: solveCounts[ch.id] || 0,
+    })),
+  });
+});
+
 // POST /api/admin/ctf
 router.post("/ctf", async (req, res) => {
   const { name, nameUz, nameRu, description, descriptionUz, descriptionRu, category, difficulty, points, hint, flag, fileUrl } = req.body;
@@ -201,20 +219,16 @@ router.post("/ctf", async (req, res) => {
 // PATCH /api/admin/ctf/:id
 async function updateCtfHandler(req: Request, res: Response) {
   const id = Number(req.params.id);
-  const { name, nameUz, nameRu, description, descriptionUz, descriptionRu, category, difficulty, points, hint, flag, fileUrl } = req.body;
-  const updates: Record<string, unknown> = {};
-  if (name !== undefined) updates.name = name;
-  if (nameUz !== undefined) updates.nameUz = nameUz;
-  if (nameRu !== undefined) updates.nameRu = nameRu;
-  if (description !== undefined) updates.description = description;
-  if (descriptionUz !== undefined) updates.descriptionUz = descriptionUz;
-  if (descriptionRu !== undefined) updates.descriptionRu = descriptionRu;
-  if (category !== undefined) updates.category = category;
-  if (difficulty !== undefined) updates.difficulty = difficulty;
-  if (points !== undefined) updates.points = Number(points);
-  if (hint !== undefined) updates.hint = hint;
-  if (flag && flag.trim()) updates.flag = hashFlag(String(flag));
-  if (fileUrl !== undefined) updates.fileUrl = fileUrl;
+  const userRole = (req as any).user?.role || "admin";
+  
+  // Filter updates based on RBAC
+  const updates = filterAllowedUpdates(userRole, "ctf_tasks", req.body);
+
+  if (updates.points !== undefined) updates.points = Number(updates.points);
+  if (updates.flag && String(updates.flag).trim()) updates.flag = hashFlag(String(updates.flag));
+  
+  if (Object.keys(updates).length === 0) return res.status(400).json({ error: "Nothing to update or no permission" });
+
   const [updated] = await db.update(ctfTasksTable).set(updates).where(eq(ctfTasksTable.id, id)).returning();
   await writeAuditLog(req, "ctf.update", "ctf", id, { fields: Object.keys(updates).filter(field => field !== "flag") });
   res.json(updated);
@@ -431,22 +445,25 @@ router.post("/competitions", async (req, res) => {
 // PATCH /api/admin/competitions/:id
 async function updateCompetitionHandler(req: Request, res: Response) {
   const id = Number(req.params.id);
-  const { name, description, type, startTime, endTime, inviteCode } = req.body;
-  const updates: Record<string, unknown> = {};
-  if (name) updates.name = name;
-  if (description !== undefined) updates.description = description;
-  if (type) updates.type = type === "private" ? "private" : "public";
-  if (inviteCode !== undefined) updates.inviteCode = String(inviteCode).trim() || null;
-  if (startTime) {
-    const start = new Date(startTime);
+  const userRole = (req as any).user?.role || "admin";
+
+  // Filter updates based on RBAC
+  const updates = filterAllowedUpdates(userRole, "competitions", req.body);
+
+  if (updates.startTime) {
+    const start = new Date(updates.startTime);
     if (Number.isNaN(start.getTime())) return res.status(400).json({ error: "Invalid start time" });
     updates.startTime = start;
   }
-  if (endTime) {
-    const end = new Date(endTime);
+  if (updates.endTime) {
+    const end = new Date(updates.endTime);
     if (Number.isNaN(end.getTime())) return res.status(400).json({ error: "Invalid end time" });
     updates.endTime = end;
   }
+  if (updates.inviteCode !== undefined) updates.inviteCode = String(updates.inviteCode).trim() || null;
+
+  if (Object.keys(updates).length === 0) return res.status(400).json({ error: "Nothing to update or no permission" });
+
   const [updated] = await db.update(competitionsTable).set(updates).where(eq(competitionsTable.id, id)).returning();
   await writeAuditLog(req, "competition.update", "competition", id, { fields: Object.keys(updates) });
   res.json(updated);
@@ -508,17 +525,23 @@ router.post("/lessons", async (req, res) => {
 // PATCH /api/admin/lessons/:id
 async function updateLessonHandler(req: Request, res: Response) {
   const id = Number(req.params.id);
-  const { title, titleUz, titleRu, content, contentUz, contentRu, categoryId, points, questions } = req.body;
-  const updates: Record<string, unknown> = {};
-  if (title) updates.title = title;
-  if (titleUz !== undefined) updates.titleUz = titleUz || null;
-  if (titleRu !== undefined) updates.titleRu = titleRu || null;
-  if (content) updates.content = content;
-  if (contentUz !== undefined) updates.contentUz = contentUz || null;
-  if (contentRu !== undefined) updates.contentRu = contentRu || null;
-  if (categoryId) updates.categoryId = Number(categoryId);
-  if (points) updates.points = Number(points);
-  const [updated] = await db.update(lessonsTable).set(updates).where(eq(lessonsTable.id, id)).returning();
+  const userRole = (req as any).user?.role || "admin";
+
+  // Filter updates based on RBAC
+  const updates = filterAllowedUpdates(userRole, "lessons", req.body);
+  const { questions } = req.body;
+
+  if (updates.categoryId) updates.categoryId = Number(updates.categoryId);
+  if (updates.points) updates.points = Number(updates.points);
+
+  if (Object.keys(updates).length === 0 && !questions) return res.status(400).json({ error: "Nothing to update or no permission" });
+
+  let updated;
+  if (Object.keys(updates).length > 0) {
+    [updated] = await db.update(lessonsTable).set(updates).where(eq(lessonsTable.id, id)).returning();
+  } else {
+    [updated] = await db.select().from(lessonsTable).where(eq(lessonsTable.id, id)).limit(1);
+  }
 
   if (questions && Array.isArray(questions)) {
     await db.delete(lessonQuestionsTable).where(eq(lessonQuestionsTable.lessonId, id));

@@ -1,4 +1,4 @@
-import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
+import { Switch, Route, Router as WouterRouter, Redirect, useLocation } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider, useAuth } from "@/lib/AuthContext";
 import { LanguageProvider } from "@/lib/LanguageContext";
@@ -51,12 +51,14 @@ import { AnimatePresence } from "framer-motion";
 import { PageTransition } from "@/components/PageTransition";
 
 function Router() {
+  const [location] = useLocation();
+
   return (
     <>
       <SeoManager />
       <Navbar />
       <AnimatePresence mode="wait">
-        <Switch>
+        <Switch location={location} key={location}>
           <Route path="/">
             {() => <PageTransition><HomePage /></PageTransition>}
           </Route>

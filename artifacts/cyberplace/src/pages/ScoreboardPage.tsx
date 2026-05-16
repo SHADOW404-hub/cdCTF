@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { Trophy, Shield, Search } from "lucide-react";
+import { Trophy, Shield, Search, Zap, Star, Target } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/Pagination";
 import { useLang } from "@/lib/LanguageContext";
 import { useGetScoreboard, getGetScoreboardQueryKey } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/AuthContext";
 import { normalizeArray } from "@/lib/api-shapes";
+import { motion, AnimatePresence } from "framer-motion";
+import { FadeIn, ScaleIn } from "@/components/PageTransition";
 
 export default function ScoreboardPage() {
   const { t } = useLang();
@@ -44,123 +45,176 @@ export default function ScoreboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground pt-32 pb-24 relative overflow-hidden">
-      {/* Background Grid */}
-      <div className="fixed inset-0 mono-grid pointer-events-none" />
+    <div className="min-h-screen bg-background text-foreground pt-32 pb-32 relative overflow-hidden">
+      {/* Background Effects */}
+      <div className="fixed inset-0 mono-grid opacity-20 pointer-events-none" />
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[15%] right-[-10%] w-[50%] h-[50%] bg-primary/5 blur-[120px] rounded-full animate-pulse" />
+        <div className="absolute bottom-[15%] left-[-10%] w-[50%] h-[50%] bg-accent/5 blur-[120px] rounded-full animate-pulse delay-1000" />
+      </div>
 
-      <div className="max-w-4xl mx-auto px-6 relative z-10">
+      <div className="max-w-5xl mx-auto px-6 relative z-10">
         {/* Header Section */}
-        <div className="mb-16">
-          <div className="flex items-center gap-6 mb-12">
-            <div className="w-16 h-16 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-center shadow-lg shadow-primary/10">
-              <Trophy className="w-8 h-8 text-primary" />
+        <div className="mb-20">
+          <FadeIn>
+            <div className="flex items-center gap-8 mb-12">
+              <div className="w-20 h-20 bg-gradient-to-br from-primary/20 to-accent/20 border border-white/10 rounded-[2rem] flex items-center justify-center shadow-2xl shadow-primary/10 backdrop-blur-md animate-float">
+                <Trophy className="w-10 h-10 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-5xl md:text-7xl font-black tracking-tighter uppercase leading-none mb-4">{t("LEADERBOARD", "REYTING", "РЕЙТИНГ")}</h1>
+                <div className="flex items-center gap-4">
+                  <div className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse" />
+                  <p className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/60">
+                    {isLoading ? "SYNCHRONIZING_GLOBAL_STREAMS..." : `${total} ACTIVE_OPERATIVES_DETECTED`}
+                  </p>
+                </div>
+              </div>
             </div>
-            <div>
-              <h1 className="text-4xl md:text-5xl font-black tracking-tighter uppercase">{t("Global Ranking", "Reyting", "Рейтинг")}</h1>
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">{isLoading ? "INITIALIZING STREAMS..." : `${total} ACTIVE OPERATIVES DETECTED`}</p>
-            </div>
-          </div>
 
-          <div className="relative">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-primary/50" />
-            <Input
-              placeholder={t("SEARCH_OPERATIVES...", "FOYDALANUVCHILARNI QIDIRING...", "ПОИСК_ОПЕРАТИВНИКОВ...")}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-16 pl-14 pr-6 bg-muted/20 border-border rounded-2xl font-bold uppercase tracking-widest focus:ring-primary/20 text-xs shadow-xl"
-            />
-          </div>
+            <div className="relative group">
+              <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-primary/40 group-focus-within:text-primary transition-colors" />
+              <input
+                placeholder={t("QUERY_OPERATIVE_ID...", "FOYDALANUVCHILARNI QIDIRING...", "ПОИСК_ОПЕРАТИВНИКОВ...")}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full h-20 pl-16 pr-8 bg-white/5 border border-white/5 rounded-[2rem] font-bold uppercase tracking-[0.2em] focus:border-primary focus:ring-8 focus:ring-primary/5 transition-all text-sm placeholder:text-muted-foreground/20"
+              />
+            </div>
+          </FadeIn>
         </div>
 
         {/* User Stats Card */}
         {data?.currentUserRank && !debouncedSearch && page === 1 && (
-          <div className="mb-12 bg-primary text-primary-foreground p-10 rounded-[2.5rem] flex items-center justify-between shadow-2xl shadow-primary/30 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform">
-              <Shield className="w-32 h-32" />
+          <FadeIn delay={0.2}>
+            <div className="mb-20 glass-card bg-primary/10 p-12 rounded-[3.5rem] flex flex-col md:flex-row items-center justify-between border-primary/20 shadow-2xl shadow-primary/5 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-12 opacity-[0.03] group-hover:scale-125 transition-transform duration-700 pointer-events-none">
+                <Shield className="w-80 h-80 text-primary" />
+              </div>
+              <div className="relative z-10 text-center md:text-left mb-8 md:mb-0">
+                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary mb-4">{t("YOUR_OPERATIVE_STATUS", "SIZNING JOYINGIZ", "ВАША_ПОЗИЦИЯ")}</p>
+                <h2 className="text-6xl md:text-8xl font-black tracking-tighter gradient-text">#{data.currentUserRank}</h2>
+              </div>
+              <div className="text-center md:text-right relative z-10">
+                <p className="text-[10px] font-black uppercase tracking-[0.4em] text-primary mb-4">{t("TOTAL_XP_ACCUMULATED", "UMUMIY XP", "ОБЩИЙ_XP")}</p>
+                <div className="text-5xl md:text-7xl font-black tracking-tighter tabular-nums">{user?.points ?? 0}</div>
+              </div>
             </div>
-            <div className="relative z-10">
-              <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-2">{t("YOUR_CURRENT_POSITION", "SIZNING JOYINGIZ", "ВАША_ПОЗИЦИЯ")}</p>
-              <h2 className="text-5xl font-black tracking-tighter">RANK #{data.currentUserRank}</h2>
-            </div>
-            <div className="text-right relative z-10">
-              <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-2">{t("TOTAL_XP", "UMUMIY XP", "ОБЩИЙ_XP")}</p>
-              <div className="text-4xl font-black tracking-tighter">{user?.points ?? 0}</div>
-            </div>
-          </div>
+          </FadeIn>
         )}
 
         {/* Leaderboard Table */}
-        {isLoading ? (
-          <div className="space-y-4">
-            {Array.from({ length: 10 }).map((_, i) => <Skeleton key={i} className="h-20 bg-muted rounded-2xl" />)}
-          </div>
-        ) : entries.length === 0 ? (
-          <div className="glass-card py-32 text-center rounded-[2.5rem] border-dashed">
-             <p className="text-xs font-black uppercase tracking-widest text-muted-foreground/40">{t("NO_RESULTS_FOUND", "NATIJALAR TOPILMADI", "РЕЗУЛЬТАТЫ_НЕ_НАЙДЕНЫ")}</p>
-          </div>
-        ) : (
-          <>
-            <div className="glass-card p-0 rounded-[2.5rem] overflow-hidden border-border bg-muted/10 mb-12">
-              {entries.map((entry, i) => {
-                const isMe = user?.id === entry.userId;
-                const rank = entry.rank;
-                const titles = normalizeArray<string>(entry.titles, ["titles", "data", "items"]);
-                
-                const rankColor = rank === 1 ? "text-yellow-500" : rank === 2 ? "text-slate-400" : rank === 3 ? "text-amber-600" : "text-muted-foreground/40";
+        <AnimatePresence mode="wait">
+          {isLoading ? (
+            <motion.div 
+              key="loading"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="space-y-4"
+            >
+              {Array.from({ length: 10 }).map((_, i) => <Skeleton key={i} className="h-24 bg-white/5 rounded-[2rem]" />)}
+            </motion.div>
+          ) : entries.length === 0 ? (
+            <motion.div 
+              key="empty"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="glass-card py-40 text-center rounded-[3rem] border-white/5"
+            >
+               <div className="w-20 h-20 bg-white/5 border border-white/5 rounded-3xl flex items-center justify-center mx-auto mb-8">
+                <Target className="w-10 h-10 text-muted-foreground/20" />
+               </div>
+               <p className="text-xs font-black uppercase tracking-[0.4em] text-muted-foreground/30">{t("ZERO_RECORDS_MATCH_QUERY", "NATIJALAR TOPILMADI", "РЕЗУЛЬТАТЫ_НЕ_НАЙДЕНЫ")}</p>
+            </motion.div>
+          ) : (
+            <motion.div 
+              key="list"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="space-y-4"
+            >
+              <div className="glass-card p-2 rounded-[3.5rem] border-white/5 bg-white/[0.01] mb-16 shadow-2xl">
+                {entries.map((entry, i) => {
+                  const isMe = user?.id === entry.userId;
+                  const rank = entry.rank;
+                  const titles = normalizeArray<string>(entry.titles, ["titles", "data", "items"]);
+                  
+                  const isTop3 = rank <= 3;
+                  const rankColor = rank === 1 ? "text-yellow-500" : rank === 2 ? "text-slate-400" : rank === 3 ? "text-amber-600" : "text-white/20";
+                  const rankGlow = rank === 1 ? "shadow-yellow-500/20" : rank === 2 ? "shadow-slate-400/20" : rank === 3 ? "shadow-amber-600/20" : "";
 
-                return (
-                  <Link href={`/profile/${entry.userId}`} key={entry.userId}>
-                    <div
-                      className={`group flex items-center gap-6 p-6 transition-all cursor-pointer border-b border-border last:border-0 hover:bg-muted ${
-                        isMe ? "bg-primary/5" : ""
-                      }`}
-                    >
-                      <div className={`w-12 text-center text-3xl font-black ${rankColor}`}>
-                        {String(rank).padStart(2, '0')}
-                      </div>
-                      
-                      <div className="w-12 h-12 bg-muted border border-border rounded-xl flex items-center justify-center text-lg font-black text-primary shrink-0 group-hover:scale-110 transition-transform overflow-hidden shadow-sm">
-                        {entry.avatarUrl ? (
-                          <img src={entry.avatarUrl} alt={entry.nickname} className="w-full h-full object-cover" />
-                        ) : <span>{entry.nickname[0].toUpperCase()}</span>}
-                      </div>
+                  return (
+                    <FadeIn key={entry.userId} delay={i * 0.03}>
+                      <Link href={`/profile/${entry.userId}`}>
+                        <div
+                          className={`group flex items-center gap-8 p-6 md:p-8 transition-all duration-500 cursor-pointer rounded-[2.5rem] mb-2 last:mb-0 hover:bg-white/5 hover:scale-[1.01] active:scale-[0.99] border border-transparent ${
+                            isMe ? "bg-primary/[0.08] border-primary/20 shadow-xl shadow-primary/5" : ""
+                          }`}
+                        >
+                          {/* Rank */}
+                          <div className={`w-16 md:w-20 text-center text-4xl md:text-5xl font-black tabular-nums tracking-tighter ${rankColor} ${isTop3 ? "animate-pulse" : ""}`}>
+                            {rank}
+                          </div>
+                          
+                          {/* Avatar */}
+                          <div className={`w-16 h-16 md:w-20 md:h-20 bg-white/5 border-2 border-white/5 rounded-3xl flex items-center justify-center text-2xl font-black text-primary shrink-0 transition-all duration-500 overflow-hidden shadow-2xl ${isMe ? "border-primary/40 shadow-primary/20" : "group-hover:border-primary/40 group-hover:shadow-primary/20"}`}>
+                            {entry.avatarUrl ? (
+                              <img src={entry.avatarUrl} alt={entry.nickname} className="w-full h-full object-cover" />
+                            ) : <span>{entry.nickname[0].toUpperCase()}</span>}
+                          </div>
 
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-4">
-                          <span className="font-black text-lg tracking-tight uppercase group-hover:text-primary transition-colors">
-                            {entry.nickname}
-                          </span>
-                          {isMe && <span className="text-[8px] font-black uppercase tracking-widest bg-primary text-primary-foreground px-2 py-0.5 rounded">YOU</span>}
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-4 mb-3">
+                              <span className="font-black text-xl md:text-3xl tracking-tighter uppercase group-hover:text-primary transition-colors truncate">
+                                {entry.nickname}
+                              </span>
+                              {isMe && (
+                                <div className="px-3 py-1 bg-primary text-primary-foreground text-[8px] font-black uppercase tracking-[0.2em] rounded-lg shadow-lg shadow-primary/20">
+                                  YOU
+                                </div>
+                              )}
+                              {isTop3 && <Star className={`w-5 h-5 fill-current ${rankColor}`} />}
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {titles.slice(0, 2).map(title => (
+                                <span key={title} className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 bg-white/5 border border-white/5 px-3 py-1 rounded-xl group-hover:border-primary/30 transition-all">
+                                  {title}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Stats */}
+                          <div className="text-right shrink-0">
+                            <div className="flex items-center justify-end gap-2 text-primary mb-2">
+                              <Zap className="w-4 h-4 fill-current" />
+                              <div className="text-3xl md:text-5xl font-black tabular-nums leading-none tracking-tighter text-white">{entry.points}</div>
+                            </div>
+                            <div className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/20">
+                              {entry.solvedCtfCount} SOLVES_LOGGED
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex gap-2 mt-2 overflow-hidden">
-                          {titles.slice(0, 1).map(title => (
-                            <span key={title} className="text-[8px] font-black uppercase tracking-widest text-muted-foreground bg-muted border border-border px-2 py-0.5 rounded transition-colors group-hover:border-primary/20">
-                              {title}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
+                      </Link>
+                    </FadeIn>
+                  );
+                })}
+              </div>
 
-                      <div className="text-right shrink-0">
-                        <div className="text-2xl font-black text-foreground leading-none">{entry.points}</div>
-                        <div className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/40 mt-1">
-                          {entry.solvedCtfCount} SOLVES
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-
-            <Pagination
-              currentPage={page}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-            />
-          </>
-        )}
+              <div className="pt-8">
+                <Pagination
+                  currentPage={page}
+                  totalPages={totalPages}
+                  onPageChange={handlePageChange}
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
 }
+

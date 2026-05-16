@@ -1,14 +1,15 @@
 import { useState } from "react";
 import { useRoute } from "wouter";
-import { Download, Flag, AlertTriangle, CheckCircle2, Lock, ExternalLink, Shield } from "lucide-react";
+import { Download, Flag, AlertTriangle, CheckCircle2, Lock, ExternalLink, Shield, Zap, Target, Cpu } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { DifficultyBadge } from "@/components/DifficultyBadge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useLang } from "@/lib/LanguageContext";
 import { useGetCtfChallenge, getGetCtfChallengeQueryKey, useSubmitCtfFlag, useGetScoreboard } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { motion, AnimatePresence } from "framer-motion";
+import { FadeIn, ScaleIn } from "@/components/PageTransition";
 
 export default function CtfDetailPage() {
   const [, params] = useRoute("/ctf/:id");
@@ -52,10 +53,14 @@ export default function CtfDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background pt-24 px-6">
-        <div className="max-w-4xl mx-auto space-y-8">
-          <Skeleton className="h-12 w-64 bg-muted rounded-xl" />
-          <Skeleton className="h-64 w-full bg-muted rounded-2xl" />
+      <div className="min-h-screen bg-background pt-32 px-6 relative overflow-hidden">
+        <div className="fixed inset-0 mono-grid opacity-10 pointer-events-none" />
+        <div className="max-w-5xl mx-auto space-y-12">
+          <Skeleton className="h-16 w-96 bg-white/5 rounded-2xl" />
+          <div className="grid lg:grid-cols-3 gap-12">
+            <Skeleton className="lg:col-span-2 h-[400px] bg-white/5 rounded-[3rem]" />
+            <Skeleton className="h-[400px] bg-white/5 rounded-[3rem]" />
+          </div>
         </div>
       </div>
     );
@@ -63,175 +68,235 @@ export default function CtfDetailPage() {
 
   if (!challenge) {
     return (
-      <div className="min-h-screen bg-background pt-24 flex items-center justify-center">
-        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground/60">{t("Challenge not found", "Topshiriq topilmadi", "Задание не найдено")}</p>
+      <div className="min-h-screen bg-background pt-32 flex items-center justify-center">
+        <ScaleIn>
+          <div className="text-center">
+            <div className="w-20 h-20 bg-white/5 border border-white/5 rounded-3xl flex items-center justify-center mx-auto mb-8">
+              <AlertTriangle className="w-10 h-10 text-destructive/50" />
+            </div>
+            <p className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/60">{t("MISSION_NOT_FOUND_IN_SECTOR", "TOPSHIRIQ TOPILMADI", "ЗАДАНИЕ НЕ НАЙДЕНО")}</p>
+          </div>
+        </ScaleIn>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground pt-32 pb-24 relative overflow-hidden">
-      {/* Background Grid */}
-      <div className="fixed inset-0 mono-grid pointer-events-none" />
+    <div className="min-h-screen bg-background text-foreground pt-32 pb-32 relative overflow-hidden">
+      {/* Background Effects */}
+      <div className="fixed inset-0 mono-grid opacity-20 pointer-events-none" />
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[10%] left-[-10%] w-[50%] h-[50%] bg-primary/5 blur-[120px] rounded-full animate-pulse" />
+        <div className="absolute bottom-[10%] right-[-10%] w-[50%] h-[50%] bg-accent/5 blur-[120px] rounded-full animate-pulse delay-1000" />
+      </div>
 
-      <div className="max-w-5xl mx-auto px-6 relative z-10">
-        {/* Mission Header */}
-        <div className="mb-12">
-          <div className="flex flex-wrap items-center gap-4 mb-8">
-            <DifficultyBadge difficulty={challenge.difficulty} className="rounded-lg px-3 py-1 text-[10px] font-black uppercase tracking-widest" />
-            <div className="px-3 py-1 bg-muted/50 border border-border rounded-lg text-[10px] font-black uppercase tracking-widest text-muted-foreground">{challenge.category}</div>
+      <div className="max-w-7xl mx-auto px-6 relative z-10">
+        {/* Header Section */}
+        <div className="mb-20">
+          <FadeIn>
+            <div className="flex flex-wrap items-center gap-4 mb-10">
+              <DifficultyBadge difficulty={challenge.difficulty} className="rounded-xl px-5 py-2 text-[10px] font-black uppercase tracking-[0.2em] shadow-lg border-white/5" />
+              <div className="px-5 py-2 bg-white/5 border border-white/5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60 backdrop-blur-md">{challenge.category}</div>
+              
+              {challenge.isSolved && (
+                <div className="flex items-center gap-3 px-5 py-2 bg-primary/10 border border-primary/20 text-[10px] font-black uppercase tracking-[0.2em] text-primary shadow-xl shadow-primary/10 animate-pulse-glow rounded-xl">
+                  <CheckCircle2 className="w-4 h-4" /> {t("TARGET_BREACHED", "YECHILDI", "ВЗЛОМАНО")}
+                </div>
+              )}
+              {challenge.isBlocked && (
+                <div className="flex items-center gap-3 px-5 py-2 bg-destructive/10 border border-destructive/20 text-[10px] font-black uppercase tracking-[0.2em] text-destructive rounded-xl">
+                  <Lock className="w-4 h-4" /> {t("TERMINAL_LOCKED", "BLOKLANGAN", "ЗАБЛОКИРОВАНО")}
+                </div>
+              )}
+            </div>
             
-            {challenge.isSolved && (
-              <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 border border-primary/20 text-[10px] font-black uppercase tracking-widest text-primary animate-in zoom-in-50">
-                <CheckCircle2 className="w-3.5 h-3.5" /> {t("BREACHED", "YECHILDI", "ВЗЛОМАНО")}
+            <h1 className="text-5xl md:text-8xl font-black tracking-tighter uppercase leading-none mb-12" data-testid="text-challenge-name">
+              <span className="text-white/20 mr-4">MISSION:</span>
+              <span className="gradient-text">{challenge.name}</span>
+            </h1>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 py-10 border-y border-white/5">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/30 mb-2 block">XP_VALUATION</span>
+                <span className="text-4xl font-black text-white tabular-nums leading-none tracking-tighter">{challenge.points}</span>
               </div>
-            )}
-            {challenge.isBlocked && (
-              <div className="flex items-center gap-2 px-3 py-1 bg-destructive/10 border border-destructive/20 text-[10px] font-black uppercase tracking-widest text-destructive">
-                <Lock className="w-3.5 h-3.5" /> {t("LOCKED", "BLOKLANGAN", "ЗАБЛОКИРОВАНО")}
+              <div className="hidden md:block w-px h-12 bg-white/5 mx-auto" />
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground/30 mb-2 block">SUCCESSFUL_BREACHES</span>
+                <span className="text-4xl font-black text-primary tabular-nums leading-none tracking-tighter">{challenge.solvedCount}</span>
               </div>
-            )}
-          </div>
-          
-          <h1 className="text-4xl md:text-6xl font-black tracking-tighter uppercase mb-8" data-testid="text-challenge-name">
-            {t("MISSION:", "MISSIYA:", "МИССИЯ:")} <span className="text-primary">{challenge.name}</span>
-          </h1>
-          
-          <div className="flex items-center gap-10 py-8 border-y border-border">
-            <div className="flex flex-col">
-              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 mb-1">XP_VALUATION</span>
-              <span className="text-3xl font-black text-foreground leading-none">{challenge.points}</span>
+              <div className="hidden md:block w-px h-12 bg-white/5 mx-auto" />
             </div>
-            <div className="w-px h-10 bg-border" />
-            <div className="flex flex-col">
-              <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/40 mb-1">BREACH_COUNT</span>
-              <span className="text-2xl font-black text-primary/80 leading-none">{challenge.solvedCount}</span>
-            </div>
-          </div>
+          </FadeIn>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-12">
           <div className="lg:col-span-2 space-y-12">
             {/* Briefing */}
-            <div className="glass-card bg-muted/20 border-border p-8 rounded-[2.5rem] relative group overflow-hidden">
-              <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity pointer-events-none">
-                <Shield className="w-48 h-48 text-primary" />
+            <FadeIn delay={0.2}>
+              <div className="glass-card p-10 rounded-[3rem] relative group overflow-hidden border-white/10 shadow-2xl">
+                <div className="absolute top-0 right-0 p-10 opacity-[0.02] group-hover:opacity-[0.05] transition-opacity pointer-events-none">
+                  <Cpu className="w-80 h-80 text-primary" />
+                </div>
+                <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary mb-10 flex items-center gap-4">
+                  <div className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse" />
+                  {t("MISSION_BRIEFING", "TAVSIF", "БРИФИНГ_МИССИИ")}
+                </h2>
+                <p className="text-xl leading-relaxed text-white/80 whitespace-pre-wrap font-medium tracking-tight" data-testid="text-description">
+                  {challenge.description}
+                </p>
               </div>
-              <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-8 flex items-center gap-3">
-                <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                {t("MISSION_BRIEFING", "TAVSIF", "БРИФИНГ_МИССИИ")}
-              </h2>
-              <p className="text-lg leading-relaxed text-foreground/80 whitespace-pre-wrap font-medium" data-testid="text-description">
-                {challenge.description}
-              </p>
-            </div>
+            </FadeIn>
 
             {/* Asset Link */}
             {challenge.fileUrl && (
-              (() => {
-                const isUrl = challenge.fileUrl.startsWith("http://") || challenge.fileUrl.startsWith("https://");
-                const Icon = isUrl ? ExternalLink : Download;
-                return (
-                  <div className="glass-card p-6 flex items-center justify-between group hover:border-primary/40 transition-all">
-                    <div className="flex items-center gap-6">
-                      <div className="w-14 h-14 bg-primary/10 border border-primary/20 rounded-2xl flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-                        <Icon className="w-6 h-6" />
+              <FadeIn delay={0.3}>
+                (() => {
+                  const isUrl = challenge.fileUrl.startsWith("http://") || challenge.fileUrl.startsWith("https://");
+                  const Icon = isUrl ? ExternalLink : Download;
+                  return (
+                    <div className="glass-card p-8 flex items-center justify-between group hover:border-primary/40 transition-all rounded-[2.5rem] border-white/5">
+                      <div className="flex items-center gap-8">
+                        <div className="w-16 h-16 bg-white/5 border border-white/5 rounded-2xl flex items-center justify-center text-primary group-hover:scale-110 transition-transform duration-500 shadow-xl">
+                          <Icon className="w-7 h-7" />
+                        </div>
+                        <div>
+                          <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-white">
+                            {isUrl ? t("REMOTE_ACCESS_POINT", "TASHQI HAVOLA", "ТОЧКА_УДАЛЕННОГО_ДОСТУПА") : t("ENCRYPTED_DATA_OBJECT", "MA'LUMOT_PAKETI", "ЗАШИФРОВАННЫЙ_ОБЪЕКТ")}
+                          </h3>
+                          <p className="text-[10px] font-black text-muted-foreground/40 uppercase tracking-[0.2em] mt-2">
+                            {isUrl ? "ESTABLISH_CONNECTION" : "EXTRACT_FOR_LOCAL_ANALYSIS"}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="text-sm font-black uppercase tracking-widest">
-                          {isUrl ? t("EXTERNAL_VECTOR", "TASHQI HAVOLA", "ВНЕШНИЙ_ВЕКТОР") : t("SECURE_DATA_PACKET", "MA'LUMOT_PAKETI", "ПАКЕТ_ДАННЫХ")}
-                        </h3>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1">
-                          {isUrl ? "VISIT_REMOTE_HOST" : "DOWNLOAD_FOR_ANALYSIS"}
-                        </p>
-                      </div>
+                      <a href={challenge.fileUrl} target={isUrl ? "_blank" : undefined} rel={isUrl ? "noopener noreferrer" : undefined} download={!isUrl}>
+                        <button className="cyber-button h-14 px-10">
+                          {isUrl ? "INITIATE_SESSION" : "PULL_ASSET"}
+                        </button>
+                      </a>
                     </div>
-                    <a href={challenge.fileUrl} target={isUrl ? "_blank" : undefined} rel={isUrl ? "noopener noreferrer" : undefined} download={!isUrl}>
-                      <button className="cyber-button h-12 px-8 text-[10px] shadow-lg shadow-primary/20" data-testid="button-download-file">
-                        {isUrl ? "OPEN_HOST" : "EXTRACT_DATA"}
-                      </button>
-                    </a>
-                  </div>
-                );
-              })()
+                  );
+                })()
+              </FadeIn>
             )}
 
-            {/* Infiltration Zone */}
+            {/* Submission Zone */}
             {!challenge.isSolved && !challenge.isBlocked && (
-              <div className="glass-card p-8 rounded-[2.5rem]">
-                <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-8 flex items-center gap-3">
-                  <Flag className="w-4 h-4" /> {t("TRANSMIT_CAPTURE_TOKEN", "FLAG_YUBORISH", "ОТПРАВИТЬ_ТОКЕН")}
-                </h2>
-                
-                {challenge.wrongAttempts > 0 && (
-                  <div className="mb-8 p-4 bg-destructive/10 border border-destructive/20 text-destructive text-[10px] font-black uppercase tracking-widest flex items-center gap-3 rounded-xl animate-in shake-in">
-                    <AlertTriangle className="w-4 h-4" />
-                    IDS_ALERT: {challenge.wrongAttempts}/3 FAILED_ATTEMPTS detected. ACCESS TERMINATION imminent.
-                  </div>
-                )}
+              <FadeIn delay={0.4}>
+                <div className="glass-card p-10 rounded-[3rem] border-primary/20 bg-primary/[0.02]">
+                  <h2 className="text-[10px] font-black uppercase tracking-[0.4em] text-primary mb-10 flex items-center gap-4">
+                    <Flag className="w-5 h-5" /> {t("TRANSMIT_CAPTURE_TOKEN", "FLAG_YUBORISH", "ОТПРАВИТЬ_ТОКЕН")}
+                  </h2>
+                  
+                  {challenge.wrongAttempts > 0 && (
+                    <motion.div 
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="mb-10 p-5 bg-destructive/10 border border-destructive/20 text-destructive text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-4 rounded-2xl"
+                    >
+                      <AlertTriangle className="w-5 h-5" />
+                      IDS_WARN: {challenge.wrongAttempts}/3 REJECTED_TOKENS. TERMINAL_LOCKOUT IMMINENT.
+                    </motion.div>
+                  )}
 
-                <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-4">
-                  <div className="relative flex-1">
-                    <Input
-                      value={flag}
-                      onChange={e => setFlag(e.target.value)}
-                      placeholder="ENTER_TOKEN{...}"
-                      className="h-16 px-6 bg-muted/50 border-border rounded-2xl font-mono text-sm uppercase tracking-widest focus:ring-primary/20"
-                      data-testid="input-flag"
-                    />
+                  <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-6">
+                    <div className="relative flex-1">
+                      <input
+                        value={flag}
+                        onChange={e => setFlag(e.target.value)}
+                        placeholder="ENTER_TOKEN{...}"
+                        className="w-full h-18 px-8 bg-white/5 border border-white/5 rounded-2xl font-mono text-sm uppercase tracking-[0.3em] focus:border-primary focus:ring-8 focus:ring-primary/5 transition-all placeholder:text-muted-foreground/20"
+                        data-testid="input-flag"
+                      />
+                    </div>
+                    <button 
+                      type="submit" 
+                      disabled={submitFlag.isPending || !flag.trim()} 
+                      className="cyber-button h-18 px-12 group"
+                      data-testid="button-submit-flag"
+                    >
+                      <span className="flex items-center gap-3">
+                        {submitFlag.isPending ? "SYNCING..." : "TRANSMIT"}
+                        <Zap className="w-4 h-4 group-hover:scale-125 transition-transform" />
+                      </span>
+                    </button>
+                  </form>
+                  <div className="mt-8 flex items-center justify-center gap-4">
+                    <div className="h-px flex-1 bg-white/5" />
+                    <p className="text-[9px] font-black uppercase tracking-[0.4em] text-muted-foreground/20">Standard Format: FLAG{"{"}&bull;&bull;&bull;&bull;{"}"}</p>
+                    <div className="h-px flex-1 bg-white/5" />
                   </div>
-                  <button 
-                    type="submit" 
-                    disabled={submitFlag.isPending || !flag.trim()} 
-                    className="h-16 px-10 bg-primary text-primary-foreground font-black uppercase tracking-widest text-xs rounded-2xl hover:opacity-90 transition-all disabled:opacity-50 shadow-xl shadow-primary/20"
-                    data-testid="button-submit-flag"
-                  >
-                    {submitFlag.isPending ? "SYNCING..." : "TRANSMIT"}
-                  </button>
-                </form>
-                <p className="text-[9px] font-black uppercase tracking-[0.4em] text-muted-foreground/30 mt-6 text-center">Standard Format: FLAG{"{"}&bull;&bull;&bull;&bull;{"}"}</p>
-              </div>
+                </div>
+              </FadeIn>
             )}
 
             {challenge.isSolved && (
-              <div className="glass-card p-12 text-center border-primary/50 bg-primary/5 rounded-[2.5rem] animate-in zoom-in-95">
-                <CheckCircle2 className="w-16 h-16 text-primary mx-auto mb-6 animate-glow" />
-                <h2 className="text-3xl font-black uppercase tracking-tighter mb-4">{t("ACCESS_GRANTED", "MUVAFFAQIYATLI", "ДОСТУП_РАЗРЕШЕН")}</h2>
-                <p className="text-muted-foreground font-bold uppercase text-xs tracking-widest">{t("MISSION COMPLETED. ASSET SECURED.", "TOPSHIRIQ YECHILDI.", "МИССИЯ ВЫПОЛНЕНА. ОБЪЕКТ ЗАЩИЩЕН.")}</p>
-              </div>
+              <ScaleIn>
+                <div className="glass-card p-16 text-center border-primary/40 bg-primary/[0.03] rounded-[3.5rem] shadow-2xl shadow-primary/5">
+                  <div className="w-24 h-24 rounded-3xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-10 shadow-xl shadow-primary/20 animate-pulse-glow">
+                    <CheckCircle2 className="w-12 h-12 text-primary" />
+                  </div>
+                  <h2 className="text-5xl font-black uppercase tracking-tighter mb-6">{t("MISSION_ACCOMPLISHED", "MUVAFFAQIYATLI", "МИССИЯ_ВЫПОЛНЕНА")}</h2>
+                  <p className="text-primary/60 font-black uppercase text-[10px] tracking-[0.5em]">{t("ASSET_SECURED // XP_CREDITED_TO_PROFILE", "TOPSHIRIQ YECHILDI // XP QO'SHILDI", "ОБЪЕКТ ЗАЩИЩЕН // XP НАЧИСЛЕНЫ")}</p>
+                </div>
+              </ScaleIn>
             )}
 
             {challenge.isBlocked && (
-              <div className="glass-card p-12 text-center border-destructive/50 bg-destructive/5 rounded-[2.5rem] animate-in zoom-in-95">
-                <Lock className="w-16 h-16 text-destructive mx-auto mb-6" />
-                <h2 className="text-3xl font-black uppercase tracking-tighter mb-4 text-destructive">{t("ACCOUNT_LOCKED", "BLOKLANDINGIZ", "АККАУНТ_ЗАБЛОКИРОВАН")}</h2>
-                <p className="text-muted-foreground font-bold uppercase text-xs tracking-widest">{t("SUSPICIOUS ACTIVITY DETECTED. ACCESS TERMINATED.", "KO'P XATO URINISHLAR. KIRISH TO'XTATILDI.", "ПОДОЗРИТЕЛЬНАЯ АКТИВНОСТЬ. ДОСТУП ПРЕКРАЩЕН.")}</p>
-              </div>
+              <ScaleIn>
+                <div className="glass-card p-16 text-center border-destructive/40 bg-destructive/[0.03] rounded-[3.5rem] shadow-2xl shadow-destructive/5">
+                  <div className="w-24 h-24 rounded-3xl bg-destructive/10 border border-destructive/20 flex items-center justify-center mx-auto mb-10 shadow-xl shadow-destructive/20">
+                    <Lock className="w-12 h-12 text-destructive" />
+                  </div>
+                  <h2 className="text-5xl font-black uppercase tracking-tighter mb-6 text-destructive">{t("TERMINAL_LOCKOUT", "BLOKLANDINGIZ", "ТЕРМИНАЛ_ЗАБЛОКИРОВАН")}</h2>
+                  <p className="text-destructive/60 font-black uppercase text-[10px] tracking-[0.5em]">{t("SUSPICIOUS_PATTERN_DETECTED // CONTACT_ADMIN", "KO'P XATO URINISHLAR // ADMINGA YOZING", "ПОДОЗРИТЕЛЬНАЯ АКТИВНОСТЬ // СВЯЖИТЕСЬ С АДМИНИСТРАЦИЕЙ")}</p>
+                </div>
+              </ScaleIn>
             )}
           </div>
 
           <div className="space-y-8">
-            <div className="glass-card p-8 rounded-[2.5rem]">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 mb-8">MISSION_METADATA</h3>
-              <div className="space-y-8">
-                <div className="flex justify-between items-end pb-4 border-b border-border">
-                  <span className="text-[9px] font-black uppercase text-muted-foreground/40">XP_YIELD</span>
-                  <span className="text-2xl font-black text-primary">+{challenge.points}</span>
-                </div>
-                <div className="flex justify-between items-end pb-4 border-b border-border">
-                  <span className="text-[9px] font-black uppercase text-muted-foreground/40">THREAT_LEVEL</span>
-                  <span className="text-xs font-black uppercase text-foreground">{challenge.difficulty}</span>
-                </div>
-                <div className="flex justify-between items-end pb-4 border-b border-border">
-                  <span className="text-[9px] font-black uppercase text-muted-foreground/40">BREACH_PROB</span>
-                  <span className="text-xs font-black text-foreground">{((challenge.solvedCount / (total || 1)) * 100).toFixed(2)}%</span>
+            <FadeIn delay={0.5}>
+              <div className="glass-card p-10 rounded-[3rem] border-white/5 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-3xl" />
+                <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-muted-foreground/30 mb-10">MISSION_METADATA</h3>
+                <div className="space-y-10">
+                  <div className="flex justify-between items-end group">
+                    <span className="text-[9px] font-black uppercase text-muted-foreground/40 group-hover:text-primary/60 transition-colors">XP_YIELD</span>
+                    <span className="text-4xl font-black text-primary tabular-nums tracking-tighter">+{challenge.points}</span>
+                  </div>
+                  <div className="h-px bg-white/5" />
+                  <div className="flex justify-between items-center group">
+                    <span className="text-[9px] font-black uppercase text-muted-foreground/40 group-hover:text-white transition-colors">THREAT_LVL</span>
+                    <span className="text-xs font-black uppercase text-white bg-white/5 px-4 py-2 rounded-xl">{challenge.difficulty}</span>
+                  </div>
+                  <div className="h-px bg-white/5" />
+                  <div className="flex justify-between items-center group">
+                    <span className="text-[9px] font-black uppercase text-muted-foreground/40 group-hover:text-white transition-colors">BREACH_PROB</span>
+                    <span className="text-xs font-black text-white bg-white/5 px-4 py-2 rounded-xl tabular-nums">{((challenge.solvedCount / (total || 1)) * 100).toFixed(2)}%</span>
+                  </div>
                 </div>
               </div>
-            </div>
+            </FadeIn>
             
-            <div className="glass-card p-8 rounded-[2.5rem] bg-primary/5 border-primary/20">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-primary mb-4">SECURITY_NOTICE</h3>
-              <p className="text-[11px] leading-relaxed text-muted-foreground font-bold italic">
+            <FadeIn delay={0.6}>
+              <div className="glass-card p-10 rounded-[3rem] bg-accent/[0.02] border-accent/20">
+                <div className="flex items-center gap-4 mb-6">
+                  <AlertTriangle className="w-5 h-5 text-accent" />
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.4em] text-accent">SECURITY_PROTOCOL</h3>
+                </div>
+                <p className="text-[11px] leading-relaxed text-muted-foreground/60 font-bold italic tracking-wide">
+                  "Exposing mission assets or capture tokens outside the cdCTF environment is strictly prohibited. Terminal access will be permanently revoked for violators."
+                </p>
+              </div>
+            </FadeIn>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+ text-muted-foreground font-bold italic">
                 "Sharing active mission data or capture tokens is a violation of the cdCTF Conduct. Violators face permanent terminal exclusion."
               </p>
             </div>

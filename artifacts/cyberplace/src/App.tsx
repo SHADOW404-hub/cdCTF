@@ -82,16 +82,16 @@ function Router() {
             {() => <PageTransition><CtfListPage /></PageTransition>}
           </Route>
           <Route path="/ctf/:id">
-            {(params) => <PageTransition><CtfDetailPage id={params.id} /></PageTransition>}
+            <PageTransition><CtfDetailPage /></PageTransition>
           </Route>
           <Route path="/learn">
             {() => <PageTransition><LearnPage /></PageTransition>}
           </Route>
           <Route path="/learn/:id/test">
-            {(params) => <PageTransition><LessonTestPage id={params.id} /></PageTransition>}
+            <PageTransition><LessonTestPage /></PageTransition>
           </Route>
           <Route path="/learn/:id">
-            {(params) => <PageTransition><LessonDetailPage id={params.id} /></PageTransition>}
+            <PageTransition><LessonDetailPage /></PageTransition>
           </Route>
           <Route path="/scoreboard">
             {() => <PageTransition><ScoreboardPage /></PageTransition>}
@@ -100,14 +100,12 @@ function Router() {
             {() => <PageTransition><CompetitionsPage /></PageTransition>}
           </Route>
           <Route path="/competitions/:id">
-            {(params) => <PageTransition><CompetitionDetailPage id={params.id} /></PageTransition>}
+            <PageTransition><CompetitionDetailPage /></PageTransition>
           </Route>
           <Route path="/competitions/:competitionId/ctf/:ctfId">
-            {(params) => (
-              <PageTransition>
-                <ProtectedRoute component={() => <CompetitionCtfPage competitionId={params.competitionId} ctfId={params.ctfId} />} />
-              </PageTransition>
-            )}
+            <PageTransition>
+              <ProtectedRoute component={CompetitionCtfPage} />
+            </PageTransition>
           </Route>
           <Route path="/dashboard">
             {() => <PageTransition><ProtectedRoute component={DashboardPage} /></PageTransition>}
@@ -119,7 +117,7 @@ function Router() {
             {() => <PageTransition><ProtectedRoute component={ProfilePage} /></PageTransition>}
           </Route>
           <Route path="/profile/:id">
-            {(params) => <PageTransition><ProfilePage id={params.id} /></PageTransition>}
+            <PageTransition><ProfilePage /></PageTransition>
           </Route>
           
           <Route path="/admin/dashboard">

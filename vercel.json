@@ -39,7 +39,7 @@
   ]
   ,
   "functions": {
-    "api/[...path].js": {
+    "api/[...path].mjs": {
       "runtime": "nodejs18.x",
       "maxDuration": 10
     }

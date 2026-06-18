@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import { randomUUID } from "node:crypto";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, or, sql } from "drizzle-orm";
 import { AUTH_COOKIE_NAME, AUTH_SESSION_MAX_AGE_MS, generateToken, authenticateToken, optionalAuth } from "../middleware/auth";
 import { createRateLimiter } from "../middleware/security";
 import { sendVerificationEmail, verifyTurnstileToken, sendPasswordResetEmail } from "../lib/integrations";
@@ -61,7 +61,7 @@ function validateRegister(body: Record<string, unknown>) {
 
 function validateLogin(body: Record<string, unknown>) {
   const { nickname, password } = body;
-  if (typeof nickname !== "string" || !normalizeNickname(nickname)) return "Nickname required";
+  if (typeof nickname !== "string" || !normalizeNickname(nickname)) return "Login required";
   if (typeof password !== "string" || !password) return "Password required";
   return null;
 }
@@ -123,10 +123,16 @@ router.post("/login", authRateLimit, async (req, res) => {
   if (err) return res.status(400).json({ error: err });
 
   const body = req.body as { nickname: string; password: string };
-  const nickname = normalizeNickname(body.nickname);
+  const identifier = normalizeNickname(body.nickname);
+  const email = normalizeEmail(identifier);
   const password = body.password;
 
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.nickname, nickname)).limit(1);
+  const [user] = await db.select().from(usersTable).where(
+    or(
+      eq(usersTable.nickname, identifier),
+      eq(usersTable.email, email),
+    ),
+  ).limit(1);
   if (!user) return res.status(401).json({ error: "Invalid credentials" });
   if (user.isBlocked) return res.status(403).json({ error: "Account blocked" });
   if (!user.emailVerified && user.role !== "admin") return res.status(403).json({ error: "Email not verified" });

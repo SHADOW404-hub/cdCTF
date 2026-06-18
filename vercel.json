@@ -37,4 +37,11 @@
       "destination": "/index.html"
     }
   ]
+  ,
+  "functions": {
+    "api/[...path].js": {
+      "runtime": "nodejs18.x",
+      "maxDuration": 10
+    }
+  }
 }

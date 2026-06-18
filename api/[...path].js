@@ -1,30 +1,16 @@
-let readyPromise = null;
-let serverlessPromise = null;
-
-function loadServerless() {
-  if (!serverlessPromise) {
-    serverlessPromise = import("../artifacts/api-server/dist/serverless.mjs");
-  }
-  return serverlessPromise;
-}
-
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   try {
-    const { app, ensureDatabaseShape } = await loadServerless();
-    if (!readyPromise) {
-      readyPromise = ensureDatabaseShape();
-    }
-    await readyPromise;
-    return app(req, res);
+    const mod = await import(new URL('./[...path].mjs', import.meta ? import.meta.url : `file://${__filename}`));
+    const fn = mod.default || mod.handler || mod;
+    return await fn(req, res);
   } catch (err) {
-    console.error("Vercel function initialization failed:", err);
+    console.error('Fallback wrapper failed to load ESM handler:', err);
     try {
-      const { logger, reportErrorToSentry } = await loadServerless();
-      logger.error({ err }, "Vercel function initialization failed");
-      void reportErrorToSentry(err, { type: "vercelFunctionInitialization" });
-    } catch (loggingErr) {
-      console.error("Critical: Logging failed too:", loggingErr);
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ error: 'Internal server error', details: String(err) }));
+    } catch (e) {
+      // ignore
     }
-    return res.status(500).json({ error: "Internal server error", details: err.message });
   }
-}
+};
